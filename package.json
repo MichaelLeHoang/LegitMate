@@ -1,0 +1,18 @@
+{
+  "name": "legitmate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-first explainable website risk scoring.",
+  "workspaces": [
+    "apps/extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace apps/extension",
+    "dev:extension": "npm run dev --workspace apps/extension",
+    "test": "npm run test --workspace apps/extension",
+    "typecheck": "npm run typecheck --workspace apps/extension"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
