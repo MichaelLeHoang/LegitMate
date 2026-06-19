@@ -168,7 +168,7 @@ export default function App() {
               <div className="w-8 h-8 rounded-lg outline-none bg-white flex items-center justify-center p-0.5 border border-brand-dark shadow-2xs">
                 <MascotEgg rating={activeScannedResult?.rating || 'GOOD'} size={24} />
               </div>
-              <span className="text-white pr-1">Try Egg-tention Panel overlay</span>
+              <span className="text-white pr-1">Try Egg-tention Panel Prevew</span>
               
               {/* Little Notification badge for warning states */}
               {activeScannedResult && activeScannedResult.score < 50 && (

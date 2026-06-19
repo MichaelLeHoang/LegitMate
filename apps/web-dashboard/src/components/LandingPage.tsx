@@ -493,7 +493,7 @@ export default function LandingPage({
           {/* VISUALIZATION STATE SWITCH PANEL */}
           <div className="mt-4 w-full max-w-sm">
             <div className="text-[10px] uppercase font-bold text-center text-brand-dark/50 tracking-wider mb-2 font-mono">
-              Quick-Toggle Egg Visual State:
+              Det-egg-tive's States:
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-brand-white p-1 rounded-2xl border-2 border-brand-dark shadow-xs">
               {[
