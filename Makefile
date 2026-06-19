@@ -1,4 +1,4 @@
-.PHONY: help install install-api install-extension dev dev-api dev-extension dev-web build build-web test test-api typecheck typecheck-web lint-api
+.PHONY: help install install-api install-extension dev dev-api dev-extension dev-web build build-web package-extension test test-api typecheck typecheck-web lint-api
 
 API_DIR = services/api
 API_VENV = $(API_DIR)/.venv
@@ -7,6 +7,10 @@ API_PORT ?= 8000
 EXTENSION_PORT ?= 5173
 WEB_PORT ?= 4300
 PORTS_SELECTED ?= 0
+
+EXT_DIST = apps/extension/dist
+EXT_PKG_NAME = legitmate-extension
+WEB_PUBLIC = apps/web-dashboard/public
 
 help:
 	@printf "LegitMate commands:\n"
@@ -17,6 +21,7 @@ help:
 	@printf "  make install          Install Node and API dependencies\n"
 	@printf "  make build            Build the extension\n"
 	@printf "  make build-web        Build the web dashboard\n"
+	@printf "  make package-extension  Build + zip the extension into the web dashboard for download\n"
 	@printf "  make test             Run extension and API tests\n"
 	@printf "  make typecheck        Typecheck the extension\n"
 	@printf "  make typecheck-web    Typecheck the web dashboard\n"
@@ -111,6 +116,19 @@ build:
 
 build-web:
 	npm run build:web
+
+# Build the extension and zip it into the web dashboard's public/ folder so the
+# site can serve it for download ("Add to Chrome" -> install modal). The archive
+# expands to a `legitmate-extension/` folder ready for Chrome's "Load unpacked".
+package-extension: build
+	@mkdir -p $(WEB_PUBLIC)
+	@rm -f $(WEB_PUBLIC)/$(EXT_PKG_NAME).zip
+	@tmp="$$(mktemp -d)"; \
+	cp -R $(EXT_DIST) "$$tmp/$(EXT_PKG_NAME)"; \
+	( cd "$$tmp" && zip -r -q "$(EXT_PKG_NAME).zip" "$(EXT_PKG_NAME)" ); \
+	mv "$$tmp/$(EXT_PKG_NAME).zip" "$(WEB_PUBLIC)/$(EXT_PKG_NAME).zip"; \
+	rm -rf "$$tmp"; \
+	printf "Packaged extension -> %s/%s.zip\n" "$(WEB_PUBLIC)" "$(EXT_PKG_NAME)"
 
 test: $(API_UVICORN)
 	npm test

@@ -15,3 +15,6 @@ __pycache__/
 .claude/
 .agent/
 legitmate
+
+# Generated extension package served by the web dashboard (run `make package-extension`)
+apps/web-dashboard/public/*.zip

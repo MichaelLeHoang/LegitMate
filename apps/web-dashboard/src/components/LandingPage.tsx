@@ -24,11 +24,14 @@ import {
   MoreVertical,
   Settings as SettingsIcon,
   History as HistoryIcon,
-  Github
+  Github,
+  Star,
+  Download,
+  X
 } from 'lucide-react';
 import { ScanResult, EggRating } from '../types';
 import { analyzeUrl, getCleanDomain } from '../utils/analyzer';
-import { config, installLinkProps } from '../config';
+import { config, isStoreLive } from '../config';
 import MascotEgg from './MascotEgg';
 
 interface LandingPageProps {
@@ -53,6 +56,19 @@ export default function LandingPage({
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+
+  // "Add to Chrome": once the store listing exists, link straight to it; until
+  // then, open the install modal (download the packaged zip + load unpacked).
+  const installAnchorProps = isStoreLive
+    ? { href: config.chromeStoreUrl, target: '_blank', rel: 'noopener noreferrer' }
+    : {
+        href: config.extensionDownloadUrl,
+        onClick: (e: React.MouseEvent) => {
+          e.preventDefault();
+          setShowInstall(true);
+        }
+      };
 
   const demoSites = [
     { label: 'PayPal (Safe)', domain: 'paypal.com', color: 'border-brand-green/30 bg-brand-green/5 hover:bg-brand-green/10 text-brand-green' },
@@ -148,7 +164,7 @@ export default function LandingPage({
           </a>
           <a
             id="nav-cta-add-chrome"
-            {...installLinkProps}
+            {...installAnchorProps}
             className="bg-brand-orange hover:bg-brand-deep text-white text-xs font-display font-bold py-2.5 px-5 rounded-full shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer"
           >
             <Chrome size={14} />
@@ -296,6 +312,84 @@ export default function LandingPage({
         </div>
       )}
 
+      {/* INSTALL MODAL (pre-store: download the packaged build + load unpacked) */}
+      {showInstall && (
+        <div
+          className="fixed inset-0 z-50 bg-brand-dark/70 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowInstall(false)}
+        >
+          <div
+            className="bg-bg-warm rounded-3xl border-4 border-brand-dark w-full max-w-md shadow-2xl overflow-hidden text-brand-dark"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-brand-white p-4 border-b-2 border-brand-border flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-bg-warm rounded-lg border-2 border-brand-dark flex items-center justify-center p-0.5">
+                  <MascotEgg rating="GOOD" size={30} />
+                </div>
+                <div>
+                  <h3 className="font-display font-extrabold text-sm text-brand-dark leading-none">Add LegitMate to Chrome</h3>
+                  <span className="text-[10px] font-bold text-brand-orange uppercase tracking-wider">Preview build · v{config.version}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInstall(false)}
+                aria-label="Close"
+                className="text-brand-dark/50 hover:text-brand-red transition-colors cursor-pointer w-7 h-7 flex items-center justify-center rounded-full hover:bg-brand-dark/5"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 flex flex-col gap-4">
+              <p className="text-xs text-brand-dark/70 leading-relaxed">
+                We're finishing our Chrome Web Store listing. For now you can install the
+                preview build in four quick steps. The UI works right away (cloud checks
+                light up once the backend is hosted).
+              </p>
+
+              <a
+                href={config.extensionDownloadUrl}
+                download
+                className="bg-brand-orange hover:bg-brand-deep text-white font-display font-bold text-sm py-3 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Download size={16} />
+                Download extension (.zip)
+              </a>
+
+              <ol className="flex flex-col gap-2.5 text-xs text-brand-dark/85">
+                {[
+                  <>Unzip the downloaded file to a folder you'll keep.</>,
+                  <>Open <code className="font-mono bg-brand-dark/5 px-1 py-0.5 rounded">chrome://extensions</code> in Chrome.</>,
+                  <>Turn on <span className="font-bold">Developer mode</span> (top-right).</>,
+                  <>Click <span className="font-bold">Load unpacked</span> and select the unzipped <span className="font-mono">legitmate-extension</span> folder.</>
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-2.5 items-start">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-brand-dark text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span className="leading-snug">{step}</span>
+                  </li>
+                ))}
+              </ol>
+
+              <a
+                href={config.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-brand-dark/50 hover:text-brand-orange transition-colors flex items-center gap-1.5 justify-center"
+              >
+                <Github size={12} />
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                  Contribute on GitHub
+                  <Star size={12} fill="currentColor" strokeWidth={0} className="shrink-0" />
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HERO SECTION */}
       <section className="relative px-6 md:px-12 pt-10 pb-16 flex flex-col lg:flex-row items-center gap-12 max-w-7xl mx-auto">
         
@@ -318,7 +412,7 @@ export default function LandingPage({
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
             <a
               id="hero-cta-add"
-              {...installLinkProps}
+              {...installAnchorProps}
               className="w-full sm:w-auto bg-brand-dark hover:bg-brand-dark/90 text-white font-display font-bold py-3.5 px-8 rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 cursor-pointer text-sm"
             >
               <Chrome size={18} className="text-brand-yellow" />
