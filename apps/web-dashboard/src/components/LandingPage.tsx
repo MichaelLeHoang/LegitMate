@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ScanResult, EggRating } from '../types';
 import { analyzeUrl, getCleanDomain } from '../utils/analyzer';
+import { config, installLinkProps } from '../config';
 import MascotEgg from './MascotEgg';
 
 interface LandingPageProps {
@@ -135,9 +136,9 @@ export default function LandingPage({
         </div>
 
         <div className="flex items-center gap-2">
-          <a 
+          <a
             id="nav-cta-github"
-            href="https://github.com" 
+            href={config.githubUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex bg-[#FAF6EB] hover:bg-bg-warm text-brand-dark border-2 border-brand-border text-xs font-display font-bold py-2 px-4 rounded-full shadow-2xs hover:shadow-xs transition-all items-center gap-2 cursor-pointer"
@@ -145,9 +146,9 @@ export default function LandingPage({
             <Github size={14} className="text-brand-dark" />
             GitHub
           </a>
-          <a 
+          <a
             id="nav-cta-add-chrome"
-            href="#full-extension-demo" 
+            {...installLinkProps}
             className="bg-brand-orange hover:bg-brand-deep text-white text-xs font-display font-bold py-2.5 px-5 rounded-full shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer"
           >
             <Chrome size={14} />
@@ -303,7 +304,7 @@ export default function LandingPage({
           <div className="inline-flex items-center gap-1.5 bg-brand-orange/10 border border-brand-orange/30 text-brand-deep rounded-full px-3 py-1 text-xs font-bold font-display tracking-tight">
             <Sparkles size={12} className="text-brand-orange" />
             Spot Scam Web Pages in 1-Click
-            <span className="text-[9.5px] bg-brand-orange text-white px-1.5 py-0.2 rounded-full font-bold">New v2.0</span>
+            <span className="text-[9.5px] bg-brand-orange text-white px-1.5 py-0.2 rounded-full font-bold">New v{config.version}</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold text-brand-dark tracking-tight leading-none">
@@ -311,13 +312,13 @@ export default function LandingPage({
           </h1>
 
           <p className="text-base sm:text-lg text-brand-dark/75 font-sans leading-relaxed max-w-xl mx-auto lg:mx-0">
-            LegitMate helps you instantly spot suspicious websites, fake storefronts, phishing pages, and scammy links before they steal your critical info. Cute, helpful, and completely private.
+            Meet Det-Egg-Tive! Your LegitMate helps you instantly spot suspicious websites, fake storefronts, phishing pages, and scammy links before they steal your critical info. Cute, helpful, and completely private.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
-            <a 
+            <a
               id="hero-cta-add"
-              href="#full-extension-demo"
+              {...installLinkProps}
               className="w-full sm:w-auto bg-brand-dark hover:bg-brand-dark/90 text-white font-display font-bold py-3.5 px-8 rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 cursor-pointer text-sm"
             >
               <Chrome size={18} className="text-brand-yellow" />
@@ -325,9 +326,9 @@ export default function LandingPage({
               <span className="text-[10px] text-brand-yellow font-mono">(Free)</span>
             </a>
 
-            <a 
+            <a
               id="hero-cta-github"
-              href="https://github.com"
+              href={config.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto bg-[#FAF6EB] hover:bg-bg-warm text-brand-dark border-2 border-brand-border font-display font-bold py-3.5 px-8 rounded-full shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer text-sm"
@@ -942,8 +943,8 @@ export default function LandingPage({
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-brand-dark/45 font-semibold">
           <span>&copy; {new Date().getFullYear()} LegitMate Security Project. All rights reserved.</span>
           <div className="flex gap-6">
-            <span className="hover:text-brand-orange cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-brand-orange cursor-pointer">Terms of Service</span>
+            <LegalLink label="Privacy Policy" href={config.privacyUrl} />
+            <LegalLink label="Terms of Service" href={config.termsUrl} />
             <span className="hover:text-brand-orange cursor-pointer">Security Auditing Log</span>
           </div>
         </div>
@@ -1108,6 +1109,23 @@ function MockEmbeddedPopup({ result, isScanning, onTriggerReport, ratingInfo }: 
       </footer>
 
     </div>
+  );
+}
+
+// Footer legal link: a real anchor when a URL is configured, otherwise inert text.
+function LegalLink({ label, href }: { label: string; href: string }) {
+  if (!href) {
+    return <span className="hover:text-brand-orange cursor-pointer">{label}</span>;
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="hover:text-brand-orange cursor-pointer"
+    >
+      {label}
+    </a>
   );
 }
 

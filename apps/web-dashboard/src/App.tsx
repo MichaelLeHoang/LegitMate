@@ -76,10 +76,10 @@ export default function App() {
             
             <div className="flex-1 pr-3">
               <div className="text-[10px] font-mono tracking-widest text-[#FF9F1C] font-black uppercase">
-                INTERACTIVE WORKSPACE
+                LIVE POPUP PREVIEW
               </div>
               <p className="text-[11px] font-semibold text-brand-yellow mt-1 leading-normal font-sans">
-                Preview the live Chrome extension overlay mockup interacting with the detective dashboard.
+                Open the LegitMate extension preview and test it against the demo sites on this page.
               </p>
               
               <div className="mt-3 flex items-center gap-2.5">
@@ -88,9 +88,9 @@ export default function App() {
                   onClick={() => setIsExtensionHubOpen(!isExtensionHubOpen)}
                   className="bg-[#FF9F1C] hover:bg-brand-orange text-brand-dark text-[10px] font-black tracking-wider uppercase px-3 py-1.5 rounded-md cursor-pointer transition-all active:scale-95"
                 >
-                  {isExtensionHubOpen ? 'Hide Extension' : 'Show Extension'}
+                  {isExtensionHubOpen ? 'Hide Preview' : 'Open Preview'}
                 </button>
-                <span className="text-[10px] font-mono text-brand-white/50 font-medium">Target: 360x560px Popup</span>
+                <span className="text-[10px] font-mono text-brand-white/50 font-medium">Chrome popup preview</span>
               </div>
             </div>
 

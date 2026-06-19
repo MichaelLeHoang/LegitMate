@@ -25,6 +25,24 @@ Or from this directory: `npm run dev` / `npm run build` / `npm run preview`.
 Via the Makefile: `make dev-web` (auto-bumps off a busy port and prints the URL),
 or `make dev` to run the API + extension + web together.
 
+## Configuration
+
+Site settings are centralized in `src/config.ts`, fed by Vite env vars. Copy
+`.env.example` to `.env` and edit (only `VITE_`-prefixed vars reach the bundle;
+`.env` is gitignored):
+
+| Var | Purpose | Default / fallback |
+| --- | --- | --- |
+| `VITE_APP_VERSION` | Version in the hero "New v…" tag | `2.0` |
+| `VITE_GITHUB_URL` | GitHub repo link (navbar + hero) | `github.com/MichaelLeHoang/LegitMate` |
+| `VITE_CHROME_STORE_URL` | "Add to Chrome" destination | empty → scroll to the in-page demo |
+| `VITE_PRIVACY_URL` | Footer "Privacy Policy" link | empty → inert text |
+| `VITE_TERMS_URL` | Footer "Terms of Service" link | empty → inert text |
+
+**"Add to Chrome":** until the extension is published, leave `VITE_CHROME_STORE_URL`
+empty — the button smooth-scrolls to the interactive demo. Once you have a Web
+Store listing, set it and the button opens the listing in a new tab.
+
 ---
 
 ## Design language
