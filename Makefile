@@ -1,23 +1,27 @@
-.PHONY: help install install-api install-extension dev dev-api dev-extension build test test-api typecheck lint-api
+.PHONY: help install install-api install-extension dev dev-api dev-extension dev-web build build-web test test-api typecheck typecheck-web lint-api
 
 API_DIR = services/api
 API_VENV = $(API_DIR)/.venv
 API_UVICORN = $(API_VENV)/bin/uvicorn
 API_PORT ?= 8000
 EXTENSION_PORT ?= 5173
+WEB_PORT ?= 4300
 PORTS_SELECTED ?= 0
 
 help:
 	@printf "LegitMate commands:\n"
-	@printf "  make dev              Start the API and extension dev servers\n"
+	@printf "  make dev              Start the API, extension, and web dev servers\n"
 	@printf "  make dev-api          Start the FastAPI dev server\n"
 	@printf "  make dev-extension    Start the extension Vite dev server\n"
+	@printf "  make dev-web          Start the web-dashboard Vite dev server\n"
 	@printf "  make install          Install Node and API dependencies\n"
 	@printf "  make build            Build the extension\n"
+	@printf "  make build-web        Build the web dashboard\n"
 	@printf "  make test             Run extension and API tests\n"
 	@printf "  make typecheck        Typecheck the extension\n"
+	@printf "  make typecheck-web    Typecheck the web dashboard\n"
 	@printf "  make lint-api         Run API linting\n"
-	@printf "\nOverride preferred ports with API_PORT=8000 EXTENSION_PORT=5173.\n"
+	@printf "\nOverride preferred ports with API_PORT=8000 EXTENSION_PORT=5173 WEB_PORT=4300.\n"
 
 install: install-extension install-api
 
@@ -43,9 +47,14 @@ dev:
 	while [ "$$extension_port" = "$$api_port" ]; do \
 		extension_port=$$(find_port "$$((extension_port + 1))"); \
 	done; \
+	web_port=$$(find_port "$(WEB_PORT)"); \
+	while [ "$$web_port" = "$$api_port" ] || [ "$$web_port" = "$$extension_port" ]; do \
+		web_port=$$(find_port "$$((web_port + 1))"); \
+	done; \
 	printf "Starting API on http://localhost:%s\n" "$$api_port"; \
 	printf "Starting extension dev server on http://127.0.0.1:%s\n" "$$extension_port"; \
-	$(MAKE) -j 2 PORTS_SELECTED=1 API_PORT=$$api_port EXTENSION_PORT=$$extension_port dev-api dev-extension
+	printf "Starting web dashboard on http://localhost:%s\n" "$$web_port"; \
+	$(MAKE) -j 3 PORTS_SELECTED=1 API_PORT=$$api_port EXTENSION_PORT=$$extension_port WEB_PORT=$$web_port dev-api dev-extension dev-web
 
 dev-api: $(API_UVICORN)
 	@find_port() { \
@@ -79,10 +88,29 @@ dev-extension:
 	api_base_url="$${VITE_API_BASE_URL:-http://localhost:$(API_PORT)}"; \
 	printf "Starting extension dev server on http://127.0.0.1:%s\n" "$$extension_port"; \
 	printf "Using API at %s\n" "$$api_base_url"; \
-	VITE_API_BASE_URL="$$api_base_url" npm run dev:extension -- --port $$extension_port
+	VITE_API_BASE_URL="$$api_base_url" npm run dev --workspace apps/extension -- --port $$extension_port
+
+dev-web:
+	@find_port() { \
+		port="$$1"; \
+		while lsof -nP -iTCP:$$port -sTCP:LISTEN >/dev/null 2>&1; do \
+			port=$$((port + 1)); \
+		done; \
+		printf "%s" "$$port"; \
+	}; \
+	if [ "$(PORTS_SELECTED)" = "1" ]; then \
+		web_port="$(WEB_PORT)"; \
+	else \
+		web_port=$$(find_port "$(WEB_PORT)"); \
+	fi; \
+	printf "Starting web dashboard on http://localhost:%s\n" "$$web_port"; \
+	npm run dev --workspace apps/web-dashboard -- --port $$web_port
 
 build:
 	npm run build
+
+build-web:
+	npm run build:web
 
 test: $(API_UVICORN)
 	npm test
@@ -93,6 +121,9 @@ test-api: $(API_UVICORN)
 
 typecheck:
 	npm run typecheck
+
+typecheck-web:
+	npm run typecheck:web
 
 lint-api: $(API_UVICORN)
 	cd $(API_DIR) && .venv/bin/ruff check .

@@ -744,7 +744,7 @@ export default function LandingPage({
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <span className="text-brand-orange font-display font-semibold text-xs tracking-wider uppercase block">Core Protective Shield</span>
           <h2 className="text-3xl md:text-4xl font-display font-extrabold text-brand-dark">Built to scan, protect, and educate</h2>
-          <p className="text-sm text-brand-dark/65">We don&apos;t just block the web — we help user intuition develop. LegitMate comes fully loaded with tools:</p>
+          <p className="text-sm text-brand-dark/65">We don&apos;t just block the web, we help user intuition develop. LegitMate comes fully loaded with tools:</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -984,7 +984,9 @@ function MockEmbeddedPopup({ result, isScanning, onTriggerReport, ratingInfo }: 
       </header>
 
       {/* Body mock */}
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-3 pb-8">
+      {/* pb must exceed the absolute footer's height (h-10 = 40px) so the last
+          content (action buttons) can scroll clear of it. */}
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-3 pb-14">
         {/* Domain strip details */}
         <div className="bg-white p-2.5 rounded-xl border border-[#F3D9A4] flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
