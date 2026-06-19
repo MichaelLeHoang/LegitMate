@@ -927,7 +927,7 @@ export default function LandingPage({
                 <MascotEgg rating="UNKNOWN" size={54} />
               </div>
               <h4 className="font-display font-bold text-base text-white">Trust Assurance</h4>
-              <p className="text-[11px] text-white/50 font-mono mt-1">Hash Integrity: Legit v1.2</p>
+              <p className="text-[11px] text-white/50 font-mono mt-1">Hash Integrity: Legit v{config.legitVersion}</p>
               
               <div className="bg-brand-dark/50 p-3 rounded-xl border border-brand-border/10 text-[11px] text-brand-yellow/90 mt-4 leading-relaxed font-semibold max-w-[200px] mx-auto">
                 No background cookie logs &bull; Built completely local.

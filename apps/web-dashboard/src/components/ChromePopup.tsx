@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ScanResult, EggRating, SearchHistoryItem } from '../types';
 import { analyzeUrl, getEggRating } from '../utils/analyzer';
+import { config } from '../config';
 import MascotEgg from './MascotEgg';
 
 interface ChromePopupProps {
@@ -244,7 +245,7 @@ export default function ChromePopup({ currentUrl, onUrlChange, onTriggerFullRepo
             <div className="bg-brand-white p-4 rounded-2xl border-2 border-brand-border shadow-xs flex flex-col items-center text-center relative overflow-visible">
               {/* Score visual helper ring in background */}
               <div className="absolute top-1 right-2 text-[10px] font-bold text-brand-dark/30 font-mono">
-                Scoring: v1.2
+                Scoring: v{config.scoringVersion}
               </div>
 
               <div className="flex flex-col items-center py-2 bg-gradient-to-b from-brand-white to-bg-warm/35 rounded-2xl w-full">

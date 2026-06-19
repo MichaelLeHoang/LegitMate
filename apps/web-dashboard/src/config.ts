@@ -12,6 +12,10 @@ const clean = (value: string | undefined): string => (value ?? "").trim();
 export const config = {
   /** App version shown in the hero "New v…" tag. */
   version: clean(env.VITE_APP_VERSION) || "2.0",
+  /** Scoring model/version label shown in the extension preview. */
+  scoringVersion: clean(env.VITE_SCORING_VERSION) || "1.2",
+  /** Trust/integrity label version shown in the privacy section. */
+  legitVersion: clean(env.VITE_LEGIT_VERSION) || "1.2",
   /** Public GitHub repository (navbar + hero "GitHub" buttons). */
   githubUrl: clean(env.VITE_GITHUB_URL) || "https://github.com/MichaelLeHoang/LegitMate",
   /**

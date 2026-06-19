@@ -34,6 +34,8 @@ Site settings are centralized in `src/config.ts`, fed by Vite env vars. Copy
 | Var | Purpose | Default / fallback |
 | --- | --- | --- |
 | `VITE_APP_VERSION` | Version in the hero "New v…" tag | `2.0` |
+| `VITE_SCORING_VERSION` | Scoring model/version label in the extension preview | `1.2` |
+| `VITE_LEGIT_VERSION` | Trust/integrity label in the privacy section | `1.2` |
 | `VITE_GITHUB_URL` | GitHub repo link (navbar + hero) | `github.com/MichaelLeHoang/LegitMate` |
 | `VITE_CHROME_STORE_URL` | "Add to Chrome" destination once published | empty → install modal (see below) |
 | `VITE_EXTENSION_DOWNLOAD_URL` | Pre-store download for "Add to Chrome" | empty → `/legitmate-extension.zip` |
