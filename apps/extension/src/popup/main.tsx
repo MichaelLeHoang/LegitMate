@@ -1,200 +1,649 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, Clipboard, ExternalLink, Flag, RefreshCw, ShieldQuestion } from "lucide-react";
+import {
+  AlertOctagon,
+  Check,
+  ChevronRight,
+  Clipboard,
+  Globe,
+  History as HistoryIcon,
+  Home,
+  Info,
+  RefreshCw,
+  Send,
+  Settings as SettingsIcon,
+  ShieldAlert,
+  ThumbsUp
+} from "lucide-react";
 import { MessageType, type ExtensionResponse } from "../messages";
-import type { AnalysisResult, RiskLevel, UserFeedback } from "../scoring/types";
+import {
+  DEFAULT_PREFERENCES,
+  type AnalysisResult,
+  type HistoryEntry,
+  type Preferences,
+  type UserFeedback
+} from "../scoring/types";
+import MascotEgg from "./MascotEgg";
+import { eggView, ratingFromRisk, severityDotClass, toneFor } from "./eggRating";
 import "./styles.css";
 
-type ViewState =
-  | { status: "loading" }
-  | { status: "ready"; result: AnalysisResult | null }
-  | { status: "checking"; result: AnalysisResult | null }
-  | { status: "error"; message: string; result: AnalysisResult | null };
+type Tab = "home" | "history" | "report" | "settings";
+
+const SCAM_TYPES = [
+  { value: "phishing", label: "Phishing login page" },
+  { value: "fake_shop", label: "Fake storefront / shopping scam" },
+  { value: "crypto", label: "Investment / get-rich-quick" },
+  { value: "impersonation", label: "Brand copycat / typosquatting" },
+  { value: "other", label: "Other malicious / scam link" }
+];
 
 function Popup() {
-  const [state, setState] = React.useState<ViewState>({ status: "loading" });
-  const [notice, setNotice] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<Tab>("home");
+  const [result, setResult] = React.useState<AnalysisResult | null>(null);
+  const [isScanning, setIsScanning] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [notification, setNotification] = React.useState<string | null>(null);
+  const [history, setHistory] = React.useState<HistoryEntry[]>([]);
+  const [prefs, setPrefs] = React.useState<Preferences>(DEFAULT_PREFERENCES);
 
-  React.useEffect(() => {
-    sendMessage({ type: MessageType.GetCachedResult })
-      .then((response) => {
-        if (!response.ok) throw new Error(response.error);
-        if (!("result" in response)) throw new Error("Unexpected cached result response.");
-        setState({ status: "ready", result: response.result });
-      })
-      .catch((error: unknown) => {
-        setState({
-          status: "error",
-          message: error instanceof Error ? error.message : "Could not load cached result.",
-          result: null
-        });
-      });
+  const [reportUrl, setReportUrl] = React.useState("");
+  const [reportType, setReportType] = React.useState("phishing");
+  const [reportSuccess, setReportSuccess] = React.useState(false);
+
+  const toastTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const toast = React.useCallback((message: string) => {
+    setNotification(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setNotification(null), 3000);
   }, []);
 
-  async function checkSite() {
-    const previous = "result" in state ? state.result : null;
-    setState({ status: "checking", result: previous });
-    setNotice(null);
+  const refreshHistory = React.useCallback(async () => {
+    const response = await sendMessage({ type: MessageType.GetHistory });
+    if (response.ok && "history" in response) setHistory(response.history);
+  }, []);
+
+  const runScan = React.useCallback(async () => {
+    setIsScanning(true);
+    setError(null);
     try {
       const response = await sendMessage({ type: MessageType.CheckActiveTab });
       if (!response.ok) throw new Error(response.error);
       if (!("result" in response)) throw new Error("Unexpected check response.");
-      setState({ status: "ready", result: response.result });
-    } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : "Could not check this site.",
-        result: previous
-      });
+      setResult(response.result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not check this site.");
+    } finally {
+      setIsScanning(false);
+      void refreshHistory();
     }
+  }, [refreshHistory]);
+
+  // Initial load: preferences, cached result, history; optionally auto-scan.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const prefsResponse = await sendMessage({ type: MessageType.GetPreferences });
+      const loadedPrefs =
+        prefsResponse.ok && "prefs" in prefsResponse ? prefsResponse.prefs : DEFAULT_PREFERENCES;
+      if (cancelled) return;
+      setPrefs(loadedPrefs);
+
+      const cached = await sendMessage({ type: MessageType.GetCachedResult });
+      if (cancelled) return;
+      if (cached.ok && "result" in cached) setResult(cached.result);
+
+      void refreshHistory();
+
+      if (loadedPrefs.autoScanOnOpen) void runScan();
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function markTrusted() {
+    if (!result) return;
+    const response = await sendMessage({
+      type: MessageType.ReportSite,
+      payload: { domain: result.domain, url: result.checkedUrl, verdict: "safe", result }
+    });
+    toast(response.ok ? "Marked as trusted. Saved locally." : "Could not save feedback.");
   }
 
-  async function copyReport(result: AnalysisResult) {
+  async function copyReport() {
+    if (!result) return;
+    const view = eggView(result, false);
     const lines = [
       `LegitMate report for ${result.hostname ?? result.checkedUrl}`,
-      `Risk: ${result.riskLevel.toUpperCase()} (${result.score}/100, ${result.confidence} confidence)`,
+      `${view.label} — ${view.statusText} (risk score ${result.score}/100, ${result.confidence} confidence)`,
+      `Mode: ${result.mode === "local-and-cloud" ? "local + cloud" : "local only"}`,
       "",
       "Reasons:",
       ...result.reasons.map((reason) => `- ${reason.title}: ${reason.description}`),
-      result.warnings.length ? "" : null,
-      ...result.warnings.map((warning) => `Warning: ${warning}`)
-    ].filter((line): line is string => line !== null);
-
-    await navigator.clipboard.writeText(lines.join("\n"));
-    setNotice("Report copied.");
+      ...(result.warnings.length ? ["", ...result.warnings.map((w) => `Warning: ${w}`)] : [])
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      toast("Report copied to clipboard.");
+    } catch {
+      toast("Could not copy report.");
+    }
   }
 
-  async function report(result: AnalysisResult, verdict: UserFeedback["verdict"]) {
-    const response = await sendMessage({
-      type: MessageType.ReportSite,
-      payload: {
-        domain: result.domain,
-        url: result.checkedUrl,
-        verdict,
-        result
-      }
-    });
-    if (!response.ok) {
-      setNotice(response.error);
-      return;
+  async function submitReport(event: React.FormEvent) {
+    event.preventDefault();
+    if (!reportUrl.trim()) return;
+    const url = reportUrl.trim();
+    const feedback: UserFeedback = {
+      domain: null,
+      url,
+      verdict: "unsafe",
+      // Attach the current scan only when it matches the reported URL.
+      result: result?.hostname && url.includes(result.hostname) ? result : null
+    };
+    const response = await sendMessage({ type: MessageType.ReportSite, payload: feedback });
+    if (response.ok) {
+      setReportSuccess(true);
+      setReportUrl("");
+      toast(`Report filed (${reportType}).`);
+      setTimeout(() => setReportSuccess(false), 3000);
+    } else {
+      toast("Could not file report.");
     }
-    if (!("reportId" in response)) {
-      setNotice("Unexpected feedback response.");
-      return;
-    }
-    setNotice(`Feedback saved locally: ${response.reportId}`);
   }
 
-  const result = "result" in state ? state.result : null;
-  const isChecking = state.status === "checking";
+  async function clearHistory() {
+    await sendMessage({ type: MessageType.ClearHistory });
+    setHistory([]);
+    toast("History cleared.");
+  }
+
+  async function updatePref<K extends keyof Preferences>(key: K, value: Preferences[K]) {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    await sendMessage({ type: MessageType.SetPreferences, payload: next });
+  }
+
+  const view = eggView(result, isScanning);
+  const ringTrust = view.trustScore ?? (isScanning ? 33 : 0);
 
   return (
-    <main className="lm-popup">
-      <header className="lm-header">
-        <div>
-          <p className="lm-kicker">LegitMate</p>
-          <h1>Website risk</h1>
+    <div
+      className={`w-[360px] h-[560px] bg-bg-warm overflow-hidden flex flex-col font-sans relative ${
+        prefs.reduceMotion ? "lm-reduce-motion" : ""
+      }`}
+    >
+      {notification && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-brand-dark text-white text-xs px-3 py-2 rounded-full shadow-lg border border-brand-border flex items-center gap-1.5 animate-bounce-subtle">
+          <Check size={12} className="text-brand-yellow" />
+          <span>{notification}</span>
         </div>
-        <RiskIcon riskLevel={result?.riskLevel ?? "unknown"} />
+      )}
+
+      {/* Header */}
+      <header className="bg-brand-white border-b-2 border-brand-border p-3.5 flex items-center justify-between shadow-xs select-none">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-9 overflow-visible bg-bg-warm rounded-lg flex items-center justify-center p-0.5 border border-brand-border">
+            <MascotEgg rating={view.rating} size={28} />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="font-display font-bold text-brand-dark text-sm tracking-tight leading-none">
+                LegitMate
+              </span>
+              <span className="text-[9px] font-bold bg-brand-orange/20 text-brand-deep px-1 rounded-sm uppercase">
+                v0.1
+              </span>
+            </div>
+            <span className="text-[10px] font-semibold text-brand-dark/60 block mt-0.5">
+              Det-Egg-Tive Mate Assistant
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={copyReport}
+            disabled={!result}
+            className="p-1.5 rounded-lg hover:bg-bg-warm transition-colors text-brand-dark/50 disabled:opacity-40 cursor-pointer"
+            title="Copy report"
+          >
+            <Clipboard size={16} />
+          </button>
+          <button
+            onClick={() => setActiveTab(activeTab === "settings" ? "home" : "settings")}
+            className={`p-1.5 rounded-lg hover:bg-bg-warm transition-colors cursor-pointer ${
+              activeTab === "settings" ? "text-brand-orange bg-bg-warm" : "text-brand-dark/50"
+            }`}
+            title="Settings"
+          >
+            <SettingsIcon size={16} />
+          </button>
+        </div>
       </header>
 
-      {state.status === "error" ? <div className="lm-alert">{state.message}</div> : null}
-
-      {result ? <RiskSummary result={result} /> : <EmptyState isLoading={state.status === "loading"} />}
-
-      <section className="lm-actions" aria-label="Actions">
-        <button className="lm-button lm-button-primary" onClick={checkSite} disabled={isChecking}>
-          <RefreshCw size={16} aria-hidden="true" />
-          {isChecking ? "Checking" : "Check current site"}
-        </button>
-        <button className="lm-icon-button" title="Copy safety report" aria-label="Copy safety report" disabled={!result} onClick={() => result && copyReport(result)}>
-          <Clipboard size={16} aria-hidden="true" />
-        </button>
-        <button className="lm-icon-button" title="Open external scan" aria-label="Open external scan" disabled={!result?.domain} onClick={() => result?.domain && openExternalScan(result.domain)}>
-          <ExternalLink size={16} aria-hidden="true" />
-        </button>
-      </section>
-
-      {result ? (
-        <section className="lm-feedback" aria-label="Feedback">
-          <button onClick={() => report(result, "safe")}>I think this is safe</button>
-          <button onClick={() => report(result, "unsafe")}>I think this is unsafe</button>
-        </section>
-      ) : null}
-
-      {notice ? <p className="lm-notice">{notice}</p> : null}
-    </main>
-  );
-}
-
-function RiskSummary({ result }: { result: AnalysisResult }) {
-  return (
-    <>
-      <section className={`lm-score lm-score-${result.riskLevel}`}>
-        <div>
-          <span className="lm-score-label">Risk</span>
-          <strong>{result.riskLevel}</strong>
-        </div>
-        <div className="lm-score-number">{result.score}</div>
-      </section>
-
-      <section className="lm-meta">
-        <div>
-          <span>Site</span>
-          <strong>{result.hostname ?? "Unsupported page"}</strong>
-        </div>
-        <div>
-          <span>Confidence</span>
-          <strong>{result.confidence}</strong>
-        </div>
-        <div>
-          <span>Mode</span>
-          <strong>{result.mode === "local-and-cloud" ? "local + cloud" : "local only"}</strong>
-        </div>
-      </section>
-
-      {result.warnings.length ? (
-        <section className="lm-warning-list">
-          {result.warnings.map((warning) => (
-            <div key={warning}>{warning}</div>
-          ))}
-        </section>
-      ) : null}
-
-      <section className="lm-reasons">
-        <h2>Reasons</h2>
-        {result.reasons.length ? (
-          result.reasons.slice(0, 8).map((reason) => (
-            <article className="lm-reason" key={`${reason.source}-${reason.id}`}>
-              <div>
-                <strong>{reason.title}</strong>
-                <p>{reason.description}</p>
+      {/* Body */}
+      <main className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-3 pb-16">
+        {activeTab === "home" && (
+          <>
+            {error && (
+              <div className="bg-brand-red/10 border border-brand-red/30 text-brand-red text-xs rounded-xl p-2.5 leading-snug">
+                {error}
               </div>
-              <span className={`lm-severity lm-severity-${reason.severity}`}>{reason.severity}</span>
-            </article>
-          ))
-        ) : (
-          <p className="lm-muted">No strong risk signals yet. Treat this as limited evidence, not a guarantee.</p>
+            )}
+
+            {/* Current site card */}
+            <div className="bg-brand-white p-3 py-2.5 rounded-xl border border-brand-border shadow-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-bg-warm border border-brand-border flex items-center justify-center shrink-0">
+                  <Globe size={14} className="text-brand-orange" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-brand-dark/40 tracking-wider">
+                    Active Tab
+                  </span>
+                  <div className="text-xs font-semibold text-brand-dark font-mono truncate max-w-[150px]">
+                    {isScanning ? "checking…" : result?.hostname ?? "unsupported page"}
+                  </div>
+                </div>
+              </div>
+              <div
+                className={`px-2.5 py-1 rounded-full text-[10px] font-bold shadow-2xs shrink-0 ${view.badgeBg}`}
+              >
+                {view.badgeText}
+              </div>
+            </div>
+
+            {/* Mascot + trust score ring */}
+            <div className="bg-brand-white p-4 rounded-2xl border-2 border-brand-border shadow-xs flex flex-col items-center text-center relative overflow-visible">
+              <div className="absolute top-1 right-2 text-[10px] font-bold text-brand-dark/30 font-mono">
+                {result ? (result.mode === "local-and-cloud" ? "local + cloud" : "local only") : ""}
+              </div>
+
+              <div className="flex flex-col items-center py-2 bg-gradient-to-b from-brand-white to-bg-warm/35 rounded-2xl w-full">
+                <div className="relative w-28 h-28 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90">
+                    <circle cx="56" cy="56" r="46" fill="none" stroke="#F3D9A4" strokeWidth="6" />
+                    <circle
+                      cx="56"
+                      cy="56"
+                      r="46"
+                      fill="none"
+                      stroke={view.accent}
+                      strokeWidth="6"
+                      strokeDasharray={`${ringTrust * 2.89} 289`}
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center overflow-visible">
+                    <MascotEgg rating={view.rating} size={54} />
+                    <span className="text-[10px] font-black font-mono leading-none mt-1 text-brand-dark">
+                      {view.trustScore ?? "--"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-center w-full">
+                  <div className={`text-sm font-black uppercase tracking-wider ${view.toneClass}`}>
+                    {view.label}
+                  </div>
+                  <div className="text-[10px] text-brand-dark/75 mt-1 font-semibold px-2">
+                    Verdict: <span className="font-bold">{view.statusText}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-brand-dark/75 mt-2 max-w-[280px] leading-relaxed px-2">
+                {view.description}
+              </p>
+            </div>
+
+            {/* Warnings (graceful-degradation notices) */}
+            {result?.warnings.length ? (
+              <div className="bg-brand-yellow/15 border border-brand-yellow/60 rounded-xl p-2.5 flex flex-col gap-1">
+                {result.warnings.map((warning) => (
+                  <span key={warning} className="text-[11px] text-brand-deep font-semibold leading-snug">
+                    ⚠ {warning}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Detective log (reasons) */}
+            <div className="bg-brand-white p-3 rounded-xl border border-brand-border shadow-xs">
+              <h4 className="text-[11px] font-bold text-brand-dark/50 uppercase tracking-wider mb-2 flex items-center gap-1 justify-between">
+                <span>Det-egg-tive Log</span>
+                {!isScanning && result && (
+                  <span className="text-[10px] font-mono lowercase normal-case text-brand-orange font-bold">
+                    {result.confidence} confidence
+                  </span>
+                )}
+              </h4>
+
+              <ul className="flex flex-col gap-2">
+                {isScanning ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <li key={i} className="flex gap-2 items-start animate-pulse">
+                      <div className="w-3.5 h-3.5 rounded-full bg-bg-warm shrink-0 mt-0.5" />
+                      <div className="h-3 bg-bg-warm rounded w-full" />
+                    </li>
+                  ))
+                ) : result && result.reasons.length > 0 ? (
+                  result.reasons.slice(0, 8).map((reason) => (
+                    <li
+                      key={`${reason.source}-${reason.id}`}
+                      className="flex gap-2 items-start text-xs text-brand-dark/85"
+                    >
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${severityDotClass(
+                          reason.severity
+                        )}`}
+                      />
+                      <span className="leading-tight">
+                        <span className="font-bold">{reason.title}.</span> {reason.description}
+                      </span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-brand-dark/50 italic text-center py-2">
+                    No strong risk signals — limited evidence, not a guarantee.
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Primary actions */}
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <button
+                onClick={runScan}
+                disabled={isScanning}
+                className="bg-brand-white hover:bg-bg-warm active:scale-95 text-brand-dark font-display font-bold text-xs py-2 px-3 rounded-lg border-2 border-brand-border shadow-2xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw size={12} className={isScanning ? "animate-spin" : ""} />
+                Scan Again
+              </button>
+              <button
+                onClick={() => result?.domain && openExternalScan(result.domain)}
+                disabled={!result?.domain}
+                className="bg-brand-orange hover:bg-brand-deep active:scale-95 text-white font-display font-bold text-xs py-2 px-3 rounded-lg shadow-2xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Info size={12} />
+                Full Report
+              </button>
+            </div>
+
+            {/* Secondary actions */}
+            <div className="flex items-center justify-between border-t border-brand-border/60 pt-3 mt-1 px-1">
+              <button
+                onClick={markTrusted}
+                disabled={!result}
+                className="text-[11px] font-bold text-brand-green hover:text-brand-green/80 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                <ThumbsUp size={12} />
+                Mark as Trusted
+              </button>
+              <button
+                onClick={() => {
+                  setReportUrl(result?.checkedUrl ?? "");
+                  setActiveTab("report");
+                }}
+                className="text-[11px] font-bold text-brand-red hover:text-brand-red/85 flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <ShieldAlert size={12} />
+                Report Scam
+              </button>
+            </div>
+          </>
         )}
-      </section>
-    </>
+
+        {activeTab === "history" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold text-sm text-brand-dark">Scan History</h3>
+              <button
+                onClick={clearHistory}
+                disabled={history.length === 0}
+                className="text-[10px] font-bold text-brand-dark/40 hover:text-brand-red transition-colors cursor-pointer disabled:opacity-40"
+              >
+                Clear All
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {history.length === 0 ? (
+                <div className="text-center py-12 text-brand-dark/40">
+                  <HistoryIcon size={24} className="mx-auto opacity-35 mb-2" />
+                  <p className="text-xs">No scans saved yet.</p>
+                </div>
+              ) : (
+                history.map((item) => {
+                  const tone = toneFor(ratingFromRisk(item.riskLevel, item.score));
+                  const trust = Math.max(0, Math.min(100, 100 - item.score));
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => item.domain && openExternalScan(item.domain)}
+                      className="bg-brand-white p-2.5 rounded-xl border border-brand-border hover:border-brand-orange hover:bg-bg-warm/35 transition-all text-left flex items-center justify-between gap-2 cursor-pointer shadow-2xs group"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs font-semibold text-brand-dark truncate">
+                          {item.hostname}
+                        </div>
+                        <span className="text-[10px] text-brand-dark/40 block mt-0.5">
+                          {formatRelative(item.checkedAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono ${tone.toneClass}`}
+                        >
+                          {trust} pts
+                        </span>
+                        <ChevronRight
+                          size={12}
+                          className="text-brand-dark/30 group-hover:translate-x-0.5 transition-transform"
+                        />
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "report" && (
+          <div className="flex flex-col gap-3">
+            <div className="text-center">
+              <h3 className="font-display font-bold text-sm text-brand-dark">Blow the Whistle 🥚📢</h3>
+              <p className="text-xs text-brand-dark/60 mt-1">
+                Flag a suspicious site. Feedback is stored locally on this device.
+              </p>
+            </div>
+
+            {reportSuccess ? (
+              <div className="bg-brand-white p-6 rounded-xl border border-brand-border text-center flex flex-col items-center gap-3 animate-pulse-slow">
+                <div className="w-12 h-12 rounded-full bg-brand-green/20 text-brand-green flex items-center justify-center">
+                  <Check size={24} />
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-sm text-brand-dark">Report filed</h4>
+                  <p className="text-xs text-brand-dark/60 mt-1">Thanks for helping other good eggs!</p>
+                </div>
+              </div>
+            ) : (
+              <form
+                onSubmit={submitReport}
+                className="bg-brand-white p-4 rounded-xl border border-brand-border flex flex-col gap-3"
+              >
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-brand-dark/50 tracking-wider block mb-1">
+                    Suspect website URL
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. dodgy-deal-payout.info"
+                    value={reportUrl}
+                    onChange={(e) => setReportUrl(e.target.value)}
+                    className="w-full text-xs p-2 rounded-lg border border-brand-border bg-bg-warm/30 focus:outline-none focus:border-brand-orange focus:bg-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-brand-dark/50 tracking-wider block mb-1">
+                    Scam type
+                  </label>
+                  <select
+                    value={reportType}
+                    onChange={(e) => setReportType(e.target.value)}
+                    className="w-full text-xs p-2 rounded-lg border border-brand-border bg-bg-warm/30 focus:outline-none focus:border-brand-orange focus:bg-white"
+                  >
+                    {SCAM_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="bg-brand-orange hover:bg-brand-deep w-full text-white text-xs font-display font-bold py-2 rounded-lg mt-1 cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Send size={11} />
+                  Submit report
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="flex flex-col gap-3">
+            <h3 className="font-display font-bold text-sm text-brand-dark">Preferences</h3>
+
+            <div className="bg-brand-white p-3.5 rounded-xl border border-brand-border flex flex-col gap-3.5">
+              <ToggleRow
+                title="Auto-scan on open"
+                description="Check the active tab automatically when the popup opens"
+                checked={prefs.autoScanOnOpen}
+                onChange={(v) => updatePref("autoScanOnOpen", v)}
+              />
+              <ToggleRow
+                title="Toolbar badge"
+                description="Show LOW / MED / HIGH on the extension icon"
+                checked={prefs.showBadge}
+                onChange={(v) => updatePref("showBadge", v)}
+                divider
+              />
+              <ToggleRow
+                title="Reduce motion"
+                description="Turn off popup animations"
+                checked={prefs.reduceMotion}
+                onChange={(v) => updatePref("reduceMotion", v)}
+                divider
+              />
+            </div>
+
+            <div className="bg-brand-white p-3 rounded-lg border border-brand-border text-[10px] text-brand-dark/60 leading-relaxed">
+              <p className="font-bold text-brand-dark/70 mb-1">Privacy</p>
+              Only the registrable domain of the active tab is ever sent to the reputation service —
+              never full URLs, paths, or browsing history.
+            </div>
+
+            <div className="bg-brand-white p-2.5 rounded-lg border border-brand-border text-center text-[10px] font-mono text-brand-dark/40 uppercase">
+              LegitMate v0.1.0
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Bottom nav */}
+      <footer className="absolute bottom-0 left-0 right-0 h-14 bg-brand-white border-t-2 border-brand-border flex items-center justify-around z-10 p-0.5 shrink-0">
+        <NavButton icon={<Home size={18} />} label="Shield" active={activeTab === "home"} onClick={() => setActiveTab("home")} />
+        <NavButton icon={<HistoryIcon size={18} />} label="History" active={activeTab === "history"} onClick={() => setActiveTab("history")} />
+        <NavButton icon={<AlertOctagon size={18} />} label="Report" active={activeTab === "report"} onClick={() => setActiveTab("report")} />
+        <NavButton icon={<SettingsIcon size={18} />} label="Setup" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
+      </footer>
+    </div>
   );
 }
 
-function EmptyState({ isLoading }: { isLoading: boolean }) {
+function NavButton({
+  icon,
+  label,
+  active,
+  onClick
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
-    <section className="lm-empty">
-      <ShieldQuestion size={28} aria-hidden="true" />
-      <p>{isLoading ? "Loading cached result." : "Check the active tab to generate an explainable risk report."}</p>
-    </section>
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
+        active ? "text-brand-orange" : "text-brand-dark/40 hover:text-brand-orange/70"
+      }`}
+    >
+      {icon}
+      <span className="text-[9px] font-bold mt-0.5">{label}</span>
+    </button>
   );
 }
 
-function RiskIcon({ riskLevel }: { riskLevel: RiskLevel }) {
-  if (riskLevel === "low") return <CheckCircle2 className="lm-risk-icon lm-risk-icon-low" size={24} aria-hidden="true" />;
-  if (riskLevel === "high") return <AlertTriangle className="lm-risk-icon lm-risk-icon-high" size={24} aria-hidden="true" />;
-  if (riskLevel === "medium") return <Flag className="lm-risk-icon lm-risk-icon-medium" size={24} aria-hidden="true" />;
-  return <ShieldQuestion className="lm-risk-icon lm-risk-icon-unknown" size={24} aria-hidden="true" />;
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+  divider
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  divider?: boolean;
+}) {
+  return (
+    <div className={`flex items-center justify-between ${divider ? "border-t border-brand-border/40 pt-3" : ""}`}>
+      <div className="pr-3">
+        <span className="text-xs font-bold text-brand-dark block">{title}</span>
+        <span className="text-[10px] text-brand-dark/50 block">{description}</span>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
+        onClick={() => onChange(!checked)}
+        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+          checked ? "bg-brand-green" : "bg-brand-dark/20"
+        }`}
+      >
+        <div
+          className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all shadow-xs ${
+            checked ? "right-[3px]" : "left-[3px]"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "recently";
+  const diffMs = Date.now() - then;
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? "yesterday" : `${days} days ago`;
 }
 
 function openExternalScan(domain: string) {

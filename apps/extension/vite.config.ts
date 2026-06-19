@@ -1,11 +1,13 @@
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     {
       name: "copy-extension-manifest",
       generateBundle() {

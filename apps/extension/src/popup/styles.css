@@ -1,314 +1,83 @@
-:root {
-  color-scheme: light;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f7f7f4;
-  color: #1f2328;
+@import "tailwindcss";
+
+/*
+ * Design ported from the LegitMate "egg detective" popup mock (legitmate/).
+ * Remote web fonts are intentionally NOT loaded: the privacy boundary forbids
+ * the popup making network calls to third parties, so we fall back to the
+ * platform font stack while keeping the same family names for parity.
+ */
+@theme {
+  --font-sans: "Nunito", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg-warm: #fff8e7;
+  --color-brand-orange: #ff9f1c;
+  --color-brand-yellow: #ffd166;
+  --color-brand-deep: #e86a17;
+  --color-brand-green: #4caf50;
+  --color-brand-red: #ef4444;
+  --color-brand-dark: #2d2a26;
+  --color-brand-white: #ffffff;
+  --color-brand-border: #f3d9a4;
+
+  --animate-bounce-subtle: bounce-subtle 3s infinite ease-in-out;
+  --animate-pulse-slow: pulse-slow 4s infinite ease-in-out;
 }
 
-* {
-  box-sizing: border-box;
+@keyframes bounce-subtle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.92;
+    transform: scale(1.02);
+  }
+}
+
+html,
 body {
   margin: 0;
-  min-width: 360px;
-  max-width: 420px;
+  width: 360px;
+  background: var(--color-bg-warm);
+  color: var(--color-brand-dark);
 }
 
-button {
-  font: inherit;
+#root {
+  width: 360px;
 }
 
-.lm-popup {
-  width: 380px;
-  min-height: 440px;
-  padding: 16px;
-  background: #f7f7f4;
+/* Honors the "Reduce motion" preference toggled in Settings. */
+.lm-reduce-motion *,
+.lm-reduce-motion *::before,
+.lm-reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
-.lm-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+/* Custom scrollbars inside the popup. */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
-
-.lm-kicker {
-  margin: 0 0 2px;
-  color: #667085;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-h1,
-h2,
-p {
-  margin: 0;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(45, 42, 38, 0.15);
+  border-radius: 99px;
 }
-
-h1 {
-  font-size: 22px;
-  line-height: 1.1;
-}
-
-h2 {
-  font-size: 14px;
-  line-height: 1.3;
-  margin-bottom: 8px;
-}
-
-.lm-risk-icon {
-  flex: 0 0 auto;
-}
-
-.lm-risk-icon-low {
-  color: #1f8f4d;
-}
-
-.lm-risk-icon-medium {
-  color: #9a6700;
-}
-
-.lm-risk-icon-high {
-  color: #b42318;
-}
-
-.lm-risk-icon-unknown {
-  color: #667085;
-}
-
-.lm-alert,
-.lm-warning-list div {
-  border: 1px solid #f1c27d;
-  background: #fff8e6;
-  color: #7a4b00;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 13px;
-  line-height: 1.35;
-  margin-bottom: 12px;
-}
-
-.lm-score {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 8px;
-  padding: 14px;
-  margin-bottom: 12px;
-  border: 1px solid #d0d5dd;
-  background: #ffffff;
-}
-
-.lm-score-low {
-  border-color: #9ad8b2;
-  background: #f0fbf4;
-}
-
-.lm-score-medium {
-  border-color: #f1c27d;
-  background: #fff8e6;
-}
-
-.lm-score-high {
-  border-color: #f3a7a0;
-  background: #fff1f0;
-}
-
-.lm-score-unknown {
-  border-color: #d0d5dd;
-}
-
-.lm-score-label,
-.lm-meta span {
-  display: block;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.2;
-}
-
-.lm-score strong {
-  display: block;
-  margin-top: 2px;
-  font-size: 22px;
-  line-height: 1;
-  text-transform: capitalize;
-}
-
-.lm-score-number {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: #1f2328;
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 800;
-}
-
-.lm-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.lm-meta div {
-  min-width: 0;
-  border: 1px solid #d0d5dd;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 9px;
-}
-
-.lm-meta div:first-child {
-  grid-column: 1 / -1;
-}
-
-.lm-meta strong {
-  display: block;
-  min-width: 0;
-  margin-top: 3px;
-  overflow-wrap: anywhere;
-  font-size: 13px;
-  line-height: 1.25;
-}
-
-.lm-reasons {
-  margin-top: 12px;
-}
-
-.lm-reason {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid #e4e7ec;
-}
-
-.lm-reason strong {
-  display: block;
-  font-size: 13px;
-  line-height: 1.25;
-}
-
-.lm-reason p,
-.lm-muted,
-.lm-empty p,
-.lm-notice {
-  color: #475467;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.lm-reason p {
-  margin-top: 3px;
-}
-
-.lm-severity {
-  align-self: start;
-  border-radius: 999px;
-  padding: 3px 7px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: capitalize;
-  white-space: nowrap;
-}
-
-.lm-severity-info,
-.lm-severity-low {
-  background: #eef2f6;
-  color: #344054;
-}
-
-.lm-severity-medium {
-  background: #fff1c2;
-  color: #7a4b00;
-}
-
-.lm-severity-high {
-  background: #ffe0dc;
-  color: #9f1d16;
-}
-
-.lm-actions {
-  display: grid;
-  grid-template-columns: 1fr 38px 38px;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.lm-button,
-.lm-icon-button,
-.lm-feedback button {
-  border: 1px solid #b8c0cc;
-  background: #ffffff;
-  color: #1f2328;
-  border-radius: 8px;
-  min-height: 38px;
-  cursor: pointer;
-}
-
-.lm-button,
-.lm-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.lm-button-primary {
-  background: #1f2328;
-  color: #ffffff;
-  border-color: #1f2328;
-  font-weight: 700;
-}
-
-.lm-icon-button {
-  width: 38px;
-}
-
-.lm-button:disabled,
-.lm-icon-button:disabled,
-.lm-feedback button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.lm-feedback {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.lm-feedback button {
-  padding: 7px 8px;
-  font-size: 12px;
-}
-
-.lm-empty {
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  min-height: 220px;
-  border: 1px dashed #b8c0cc;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  color: #667085;
-}
-
-.lm-notice {
-  margin-top: 10px;
-}
-
-button:focus-visible {
-  outline: 3px solid #84caff;
-  outline-offset: 2px;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(45, 42, 38, 0.25);
 }

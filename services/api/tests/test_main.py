@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import ReputationFinding
-from app.reputation.rdap import RdapResult
+from app.rdap.client import RdapResult
 
 
 @dataclass
@@ -26,8 +26,8 @@ class FakeFeedRepository:
 
 
 def test_analyze_domain_returns_explainable_signals(monkeypatch) -> None:
-    monkeypatch.setattr("app.main.rdap_client", FakeRdapClient())
-    monkeypatch.setattr("app.main.feed_repository", FakeFeedRepository())
+    monkeypatch.setattr("app.routers.domain_analysis.rdap_client", FakeRdapClient())
+    monkeypatch.setattr("app.routers.domain_analysis.feed_repository", FakeFeedRepository())
     client = TestClient(app)
 
     response = client.post(

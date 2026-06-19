@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.models import ReputationFinding, RiskSignal
-from app.reputation.rdap import RdapResult
+from app.rdap.client import RdapResult
 
 
 def signals_from_reputation(findings: list[ReputationFinding], rdap: RdapResult) -> list[RiskSignal]:

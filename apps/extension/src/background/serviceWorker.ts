@@ -3,7 +3,16 @@ import { MessageType, type ExtensionRequest, type ExtensionResponse } from "../m
 import { buildAnalysisResult } from "../scoring/scoring";
 import type { AnalysisResult, DomainAnalysisResponse, PageSignalSummary } from "../scoring/types";
 import { analyzeUrl } from "../scoring/urlFeatures";
-import { getCachedResult, saveFeedback, setCachedResult } from "../storage/cache";
+import {
+  appendHistory,
+  clearHistory,
+  getCachedResult,
+  getHistory,
+  getPreferences,
+  saveFeedback,
+  setCachedResult,
+  setPreferences
+} from "../storage/cache";
 
 chrome.runtime.onMessage.addListener((message: ExtensionRequest, _sender, sendResponse) => {
   handleMessage(message)
@@ -24,6 +33,16 @@ async function handleMessage(message: ExtensionRequest): Promise<ExtensionRespon
       const reportId = await saveFeedback(message.payload);
       return { ok: true, reportId };
     }
+    case MessageType.GetHistory:
+      return { ok: true, history: await getHistory() };
+    case MessageType.ClearHistory:
+      await clearHistory();
+      return { ok: true };
+    case MessageType.GetPreferences:
+      return { ok: true, prefs: await getPreferences() };
+    case MessageType.SetPreferences:
+      await setPreferences(message.payload);
+      return { ok: true };
     default:
       return { ok: false, error: "Unsupported message." };
   }
@@ -41,6 +60,7 @@ async function checkActiveTab(): Promise<AnalysisResult> {
 
   const result = buildAnalysisResult(urlAnalysis, pageSignals, domainOutcome.data, domainOutcome.error);
   await setCachedResult(result);
+  await appendHistory(result);
   await updateBadge(tab.id, result);
   return result;
 }
@@ -86,6 +106,11 @@ async function fetchDomainAnalysis(
 
 async function updateBadge(tabId: number | undefined, result: AnalysisResult): Promise<void> {
   if (!tabId) return;
+  const { showBadge } = await getPreferences();
+  if (!showBadge) {
+    await chrome.action.setBadgeText({ tabId, text: "" });
+    return;
+  }
   const badgeTextByRisk = {
     low: "LOW",
     medium: "MED",

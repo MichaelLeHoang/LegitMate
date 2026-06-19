@@ -4,13 +4,17 @@
   "private": true,
   "description": "Privacy-first explainable website risk scoring.",
   "workspaces": [
-    "apps/extension"
+    "apps/extension",
+    "apps/web-dashboard"
   ],
   "scripts": {
     "build": "npm run build --workspace apps/extension",
+    "build:web": "npm run build --workspace apps/web-dashboard",
     "dev:extension": "npm run dev --workspace apps/extension",
+    "dev:web": "npm run dev --workspace apps/web-dashboard",
     "test": "npm run test --workspace apps/extension",
-    "typecheck": "npm run typecheck --workspace apps/extension"
+    "typecheck": "npm run typecheck --workspace apps/extension",
+    "typecheck:web": "npm run typecheck --workspace apps/web-dashboard"
   },
   "engines": {
     "node": ">=20"

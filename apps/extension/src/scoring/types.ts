@@ -58,5 +58,30 @@ export interface UserFeedback {
   domain: string | null;
   url: string;
   verdict: "safe" | "unsafe";
-  result: AnalysisResult;
+  result: AnalysisResult | null;
 }
+
+export interface HistoryEntry {
+  id: string;
+  hostname: string;
+  domain: string | null;
+  /** Risk score 0-100 (higher = riskier), mirroring AnalysisResult.score. */
+  score: number;
+  riskLevel: RiskLevel;
+  checkedAt: string;
+}
+
+export interface Preferences {
+  /** Automatically run a fresh check when the popup opens. */
+  autoScanOnOpen: boolean;
+  /** Show the LOW/MED/HIGH badge on the toolbar icon. */
+  showBadge: boolean;
+  /** Disable popup animations. */
+  reduceMotion: boolean;
+}
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  autoScanOnOpen: true,
+  showBadge: true,
+  reduceMotion: false
+};

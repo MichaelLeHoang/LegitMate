@@ -9,7 +9,10 @@ absolute scam detection.
 
 - `apps/extension` - Manifest V3 Chrome extension built with React, TypeScript,
   and Vite.
+- `apps/web-dashboard` - Placeholder for the future web dashboard app.
 - `services/api` - FastAPI service for domain-only reputation and RDAP checks.
+- `services/workers` - Placeholder for background workers.
+- `ml` - Dataset, feature, training, and model workspace.
 - `docs` - Privacy, scoring, threat-model, and contribution notes.
 
 ## Quick Start
