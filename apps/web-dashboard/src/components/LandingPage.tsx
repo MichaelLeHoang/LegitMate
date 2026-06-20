@@ -406,7 +406,8 @@ export default function LandingPage({
           </h1>
 
           <p className="text-base sm:text-lg text-brand-dark/75 font-sans leading-relaxed max-w-xl mx-auto lg:mx-0">
-            Meet Det-Egg-Tive! Your LegitMate helps you instantly spot suspicious websites, fake storefronts, phishing pages, and scammy links before they steal your critical info. Cute, helpful, and completely private.
+            Your LegitMate helps you instantly spot <span className="text-brand-orange underline decoration-[3px] decoration-brand-yellow"> suspicious websites</span>, <span className="text-brand-orange underline decoration-[3px] decoration-brand-yellow">fake storefronts</span>,  <span className="text-brand-orange underline decoration-[3px] decoration-brand-yellow">phishing pages</span> , 
+            and <span className="text-brand-orange underline decoration-[3px] decoration-brand-yellow"> scammy links</span> before they steal your critical info. Cute, helpful, and completely private.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
