@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/package-extension.mjs --if-missing",
     "dev": "vite",
+    "prebuild": "node scripts/package-extension.mjs",
     "build": "tsc --noEmit && vite build",
+    "package:extension": "node scripts/package-extension.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

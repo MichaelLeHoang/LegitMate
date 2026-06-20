@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LegitMate">
+  <rect width="64" height="64" rx="14" fill="#FFF8E7"/>
+  <circle cx="32" cy="34" r="25" fill="#FF9F1C" opacity="0.14"/>
+  <path d="M32 13C18 13 14 31 14 42c0 9 8 15 18 15s18-6 18-15c0-11-4-29-18-29Z" fill="#fff" stroke="#2D2A26" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M12 27c10-8 30-8 40 0 2 2 1 5-3 5H15c-4 0-5-3-3-5Z" fill="#F5A342" stroke="#2D2A26" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M15 27c3-14 31-14 34 0Z" fill="#D68227" stroke="#2D2A26" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="32" cy="12" r="5" fill="#E86A17" stroke="#2D2A26" stroke-width="3"/>
+  <path d="M23 39c2-4 6-4 8 0M35 39c2-4 6-4 8 0" fill="none" stroke="#2D2A26" stroke-width="4" stroke-linecap="round"/>
+  <path d="M27 46c3 5 7 5 10 0" fill="none" stroke="#2D2A26" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="46" cy="46" r="8" fill="#FFF8E7" fill-opacity="0.85" stroke="#2D2A26" stroke-width="4"/>
+  <path d="M51 52l6 6" stroke="#2D2A26" stroke-width="5" stroke-linecap="round"/>
+  <path d="M51 52l6 6" stroke="#E86A17" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

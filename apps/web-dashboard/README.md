@@ -48,8 +48,8 @@ There's no real one-click "Add to Chrome" until the extension is on the Chrome W
 Store. Until then, the site hands users a packaged build to **load unpacked**:
 
 ```bash
-make package-extension      # builds the extension + zips it to public/legitmate-extension.zip
-npm run dev:web             # or build:web — the zip is served at /legitmate-extension.zip
+npm run dev:web             # creates the zip if missing, then starts Vite
+npm run build:web           # refreshes the zip, then builds dist for deployment
 ```
 
 Clicking **"Add to Chrome"** then opens an install modal: a **Download (.zip)** button
@@ -57,9 +57,11 @@ plus the four `chrome://extensions` → Developer mode → Load unpacked steps. 
 works immediately on local heuristics; cloud reputation checks activate once the
 backend is hosted (point the extension's `config.ts` / `VITE_API_BASE_URL` at it).
 
-The zip is **generated, not committed** (gitignored), so run `make package-extension`
-before `build:web` when deploying. To host it elsewhere (e.g. a GitHub release asset),
-set `VITE_EXTENSION_DOWNLOAD_URL` to that URL.
+The zip is **generated, not committed** (gitignored). The dashboard `predev` and
+`prebuild` scripts create `public/legitmate-extension.zip` automatically, so Vercel
+will include it when the build command is `npm run build:web` from the repo root
+or `npm run build` from `apps/web-dashboard`. To host it elsewhere (e.g. a GitHub
+release asset), set `VITE_EXTENSION_DOWNLOAD_URL` to that URL.
 
 **When the store listing is live:** set `VITE_CHROME_STORE_URL` and every "Add to
 Chrome" button switches from the install modal to opening the listing — no code change.
