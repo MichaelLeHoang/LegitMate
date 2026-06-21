@@ -108,7 +108,7 @@ const STATUS_TEXT: Record<EggRating, string> = {
 };
 
 const DESCRIPTION: Record<EggRating, string> = {
-  GOOD: "This domain checks out. No strong risk signals were found — keep browsing safely.",
+  GOOD: "This domain checks out. No strong risk signals were found. Keep browsing safely.",
   CAREFUL: "Some risk flags showed up. Likely fine, but stay alert for unusual requests.",
   CRACKED: "Notable risk flags detected. Be careful with any forms or payment fields here.",
   ROTTEN: "Strong scam/phishing indicators detected. Avoid entering any personal info.",

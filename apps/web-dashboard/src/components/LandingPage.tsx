@@ -583,7 +583,7 @@ export default function LandingPage({
                   Egg-Detective Quick Lesson: Typosquatting
                 </h4>
                 <p className="text-xs text-brand-dark/75 leading-relaxed">
-                  Scammers register domains resembling famous brands — e.g. replacing a lowercase letter <strong>l</strong> with the number <strong>1</strong> (<strong>paypa1.com</strong> instead of <strong>paypal.com</strong>), or adding artificial security tails (<strong>amazon-security-alert.xyz</strong>).
+                  Scammers register domains resembling famous brands, e.g. replacing a lowercase letter <strong>l</strong> with the number <strong>1</strong> (<strong>paypa1.com</strong> instead of <strong>paypal.com</strong>), or adding artificial security tails (<strong>amazon-security-alert.xyz</strong>).
                 </p>
                 <div className="p-3 bg-brand-red/5 rounded-xl border border-brand-red/20 text-xs flex gap-2 items-start text-brand-red">
                   <AlertTriangle size={14} className="shrink-0 mt-0.5" />
