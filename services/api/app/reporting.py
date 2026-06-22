@@ -4,7 +4,7 @@ from typing import Literal
 
 ReportRegion = Literal["US", "CA"]
 ScamType = Literal["phishing", "fake_shop", "crypto", "impersonation", "other"]
-ReportRoutingDecision = Literal["eligible", "held_low_risk"]
+ReportRoutingDecision = Literal["review_priority", "standard_review"]
 
 
 DESTINATIONS = [
@@ -72,12 +72,12 @@ def destinations_for(region: ReportRegion | None, scam_type: ScamType | None) ->
 
 def routing_decision_for(result: dict | None) -> ReportRoutingDecision:
     if not result:
-        return "held_low_risk"
+        return "standard_review"
 
     score = result.get("score")
     risk_level = result.get("riskLevel")
     if risk_level in {"medium", "high"}:
-        return "eligible"
+        return "review_priority"
     if isinstance(score, int) and score >= 30:
-        return "eligible"
-    return "held_low_risk"
+        return "review_priority"
+    return "standard_review"

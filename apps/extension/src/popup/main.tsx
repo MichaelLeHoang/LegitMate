@@ -174,11 +174,10 @@ function Popup() {
     if (response.ok) {
       setReportSuccess(true);
       setReportUrl("");
-      if (pendingReport.routingDecision === "eligible") {
-        pendingReport.destinations.forEach((destination) => openExternalDestination(destination.url));
-        toast("Report saved. Official destinations opened.");
+      if ("queued" in response && response.queued) {
+        toast("Report submitted to LegitMate review.");
       } else {
-        toast("Report saved for review.");
+        toast("Report saved locally. Central queue unavailable.");
       }
       setPendingReport(null);
       setTimeout(() => setReportSuccess(false), 3000);
@@ -501,7 +500,7 @@ function Popup() {
             <div className="text-center">
               <h3 className="font-display font-bold text-sm text-brand-dark">Report suspicious site</h3>
               <p className="text-xs text-brand-dark/60 mt-1">
-                Review official destinations for your selected region before filing.
+                Send a report to LegitMate review with region context for follow-up.
               </p>
             </div>
 
@@ -570,7 +569,7 @@ function Popup() {
                   className="bg-brand-orange hover:bg-brand-deep w-full text-white text-xs font-display font-bold py-2 rounded-lg mt-1 cursor-pointer transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Send size={11} />
-                  Review destinations
+                  Review report
                 </button>
               </form>
             )}
@@ -656,7 +655,7 @@ function ReportConfirmationModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const isEligible = pendingReport.routingDecision === "eligible";
+  const isPriority = pendingReport.routingDecision === "review_priority";
   const topReasons = result?.reasons.slice(0, 3) ?? [];
 
   return (
@@ -669,28 +668,28 @@ function ReportConfirmationModal({
       >
         <div>
           <h3 id="report-confirm-title" className="font-display font-bold text-sm text-brand-dark">
-            Confirm report routing
+            Confirm report submission
           </h3>
           <p className="text-xs text-brand-dark/60 mt-1 leading-snug">
-            LegitMate will save this report and show official destinations for your selected region.
+            LegitMate will collect this report for internal review before any external filing.
           </p>
         </div>
 
         <div
           className={`rounded-lg border p-2.5 ${
-            isEligible ? "bg-brand-red/10 border-brand-red/25" : "bg-brand-yellow/15 border-brand-yellow/50"
+            isPriority ? "bg-brand-red/10 border-brand-red/25" : "bg-brand-yellow/15 border-brand-yellow/50"
           }`}
         >
           <div className="text-[10px] font-bold uppercase tracking-wider text-brand-dark/50">
-            Routing decision
+            Review priority
           </div>
           <div className="text-xs font-bold text-brand-dark mt-0.5">
-            {isEligible ? "Eligible to open official destinations" : "Saved only; held from auto-routing"}
+            {isPriority ? "Priority review" : "Standard review"}
           </div>
           <p className="text-[11px] text-brand-dark/65 mt-1 leading-snug">
-            {isEligible
-              ? "The scan result is medium or high risk, so LegitMate can open the destination pages after confirmation."
-              : "The scan did not find enough risk signals. The report will be saved without opening external destinations."}
+            {isPriority
+              ? "The scan is medium or high risk, so this report will be prioritized in the central review queue."
+              : "The scan did not find enough risk signals, so this report will be collected for standard review."}
           </p>
         </div>
 
@@ -716,7 +715,7 @@ function ReportConfirmationModal({
 
         <div className="flex flex-col gap-2">
           <div className="text-[10px] font-bold uppercase tracking-wider text-brand-dark/50">
-            Official destinations
+            Likely destinations after review
           </div>
           {pendingReport.destinations.map((destination) => (
             <div
@@ -742,7 +741,7 @@ function ReportConfirmationModal({
             onClick={onConfirm}
             className="bg-brand-orange hover:bg-brand-deep text-white font-display font-bold text-xs py-2 px-3 rounded-lg transition-colors cursor-pointer"
           >
-            {isEligible ? "Save and open" : "Save report"}
+            Submit to review
           </button>
         </div>
       </section>
@@ -828,10 +827,6 @@ function formatRelative(iso: string): string {
 
 function openExternalScan(domain: string) {
   chrome.tabs.create({ url: `https://urlscan.io/search/#domain:${encodeURIComponent(domain)}` });
-}
-
-function openExternalDestination(url: string) {
-  chrome.tabs.create({ url });
 }
 
 function sendMessage(message: unknown): Promise<ExtensionResponse> {

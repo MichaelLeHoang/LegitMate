@@ -10,10 +10,10 @@ Risk levels:
 - `high`: score 60 or higher
 - `unknown`: not enough data to make a useful judgment
 
-Report routing uses the same risk-score threshold. Reports with `medium` or
-`high` risk, or score `>= 30`, are eligible for guided official-destination
-routing after user confirmation. Reports with `low` or `unknown` risk are saved
-but held from automatic external routing.
+Report review priority uses the same risk-score threshold. Reports with
+`medium` or `high` risk, or score `>= 30`, are marked `review_priority` in the
+central queue. Reports with `low` or `unknown` risk are still collected, but are
+marked `standard_review`.
 
 Initial v0.1 signals include:
 

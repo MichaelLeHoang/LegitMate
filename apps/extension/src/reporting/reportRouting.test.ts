@@ -33,14 +33,14 @@ describe("report routing", () => {
     );
   });
 
-  it("routes medium and high risk reports as eligible", () => {
-    expect(getRoutingDecision(resultFor(30, "medium"))).toBe("eligible");
-    expect(getRoutingDecision(resultFor(60, "high"))).toBe("eligible");
+  it("prioritizes medium and high risk reports for review", () => {
+    expect(getRoutingDecision(resultFor(30, "medium"))).toBe("review_priority");
+    expect(getRoutingDecision(resultFor(60, "high"))).toBe("review_priority");
   });
 
-  it("holds low or unknown reports from automatic routing", () => {
-    expect(getRoutingDecision(resultFor(10, "low"))).toBe("held_low_risk");
-    expect(getRoutingDecision(resultFor(0, "unknown"))).toBe("held_low_risk");
-    expect(getRoutingDecision(null)).toBe("held_low_risk");
+  it("keeps low or unknown reports at standard review priority", () => {
+    expect(getRoutingDecision(resultFor(10, "low"))).toBe("standard_review");
+    expect(getRoutingDecision(resultFor(0, "unknown"))).toBe("standard_review");
+    expect(getRoutingDecision(null)).toBe("standard_review");
   });
 });

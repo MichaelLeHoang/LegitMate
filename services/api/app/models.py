@@ -45,7 +45,7 @@ class ReportRequest(BaseModel):
     verdict: Literal["safe", "unsafe"]
     scamType: Literal["phishing", "fake_shop", "crypto", "impersonation", "other"] | None = None
     region: Literal["US", "CA"] | None = None
-    routingDecision: Literal["eligible", "held_low_risk"] | None = None
+    routingDecision: Literal["review_priority", "standard_review"] | None = None
     destinationIds: list[str] = Field(default_factory=list)
     result: dict | None = None
 
@@ -62,5 +62,5 @@ class ReportDestination(BaseModel):
 
 class ReportResponse(BaseModel):
     reportId: str
-    routingDecision: Literal["eligible", "held_low_risk"]
+    routingDecision: Literal["review_priority", "standard_review"]
     destinations: list[ReportDestination]

@@ -11,7 +11,8 @@ sites, suspicious login/payment pages, and scam-like offers.
 The market already has browser-level protection and commercial extensions. The
 project's advantage is transparency: every score is backed by visible signals,
 confidence, and user-verifiable evidence. The default product stance remains
-local-first, minimal-permission, and user-confirmed for any external reporting.
+local-first, minimal-permission, and centralized review before any external
+reporting.
 
 Useful public references for the roadmap:
 
@@ -28,11 +29,12 @@ Useful public references for the roadmap:
   user preferences, and toolbar badge updates.
 - The FastAPI backend supports domain-only analysis with RDAP and feed-derived
   reputation signals.
-- Reports can include scam type, user-selected region, routing decision, and
-  recommended destination ids.
+- Reports can include scam type, user-selected region, review-priority decision,
+  and likely official destination ids.
 - Region-based report routing currently supports the United States and Canada.
-  It is guided routing only: LegitMate opens official destination pages after
-  user confirmation, and does not silently submit reports to agencies.
+  It is queue-first: LegitMate collects reports centrally and uses region plus
+  scan results to help reviewers choose the right destination later. The
+  extension does not submit reports directly to agencies.
 - Current preferences are `autoScanOnOpen`, `showBadge`, `reduceMotion`, and
   `reportRegion`.
 
@@ -57,17 +59,19 @@ Useful public references for the roadmap:
   aggressive blocking in v0.1.
 - Add only source-attributed reputation data and document API terms/rate limits.
 
-### Phase 2: Regional Report Routing
+### Phase 2: Regional Report Collection
 
 - Maintain a destination registry for supported regions and scam types.
 - Default `reportRegion` to `US`; allow manual switching to `CA`.
-- Show a confirmation modal before any external destination opens.
-- Route medium/high-risk reports as eligible when `score >= 30` or
+- Show a confirmation modal before the report is submitted to LegitMate's
+  central queue.
+- Mark medium/high-risk reports as `review_priority` when `score >= 30` or
   `riskLevel` is `medium`/`high`.
-- Hold low/unknown reports from automatic routing, but still save them for local
-  feedback and future review.
+- Mark low/unknown reports as `standard_review`, but still collect them for
+  review and false-negative analysis.
 - Keep direct external submission disabled until an agency has a verified API or
-  documented intake flow that permits automated submissions.
+  documented intake flow that permits automated submissions and the internal
+  review process has approved forwarding.
 
 Initial destinations:
 
@@ -138,7 +142,9 @@ Official references:
 - Suspicious domain: medium/high risk with source-attributed reasons.
 - Backend unavailable: local-only result with warning, not a hard failure.
 - Report region: US/Canada destinations change with the setting.
-- Report routing: medium/high risk opens destinations only after confirmation.
-- Report hold: low/unknown risk is saved but not automatically routed.
+- Report collection: all reports are submitted to the central review queue when
+  the API is available.
+- Report priority: medium/high risk is marked `review_priority`; low/unknown
+  risk is marked `standard_review`.
 - Privacy: no geolocation permission, no browsing-history upload, and no full
   URL cloud checks by default.

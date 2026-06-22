@@ -73,9 +73,9 @@ export function getReportDestinations(region: ReportRegion, scamType: ScamType):
 }
 
 export function getRoutingDecision(result: AnalysisResult | null): ReportRoutingDecision {
-  if (!result) return "held_low_risk";
+  if (!result) return "standard_review";
   if (result.riskLevel === "medium" || result.riskLevel === "high" || result.score >= 30) {
-    return "eligible";
+    return "review_priority";
   }
-  return "held_low_risk";
+  return "standard_review";
 }

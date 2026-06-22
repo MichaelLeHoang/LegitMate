@@ -66,14 +66,14 @@ def test_report_site_returns_region_destinations() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["routingDecision"] == "eligible"
+    assert payload["routingDecision"] == "review_priority"
     assert {destination["id"] for destination in payload["destinations"]} >= {
         "ca-cafc",
         "ca-cyber-centre",
     }
 
 
-def test_report_site_holds_low_risk_result() -> None:
+def test_report_site_marks_low_risk_result_standard_review() -> None:
     client = TestClient(app)
     response = client.post(
         "/v1/report",
@@ -87,7 +87,7 @@ def test_report_site_holds_low_risk_result() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["routingDecision"] == "held_low_risk"
+    assert response.json()["routingDecision"] == "standard_review"
 
 
 def test_report_site_rejects_invalid_region() -> None:

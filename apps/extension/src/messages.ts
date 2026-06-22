@@ -1,4 +1,11 @@
-import type { AnalysisResult, HistoryEntry, Preferences, UserFeedback } from "./scoring/types";
+import type {
+  AnalysisResult,
+  HistoryEntry,
+  Preferences,
+  ReportDestinationSummary,
+  ReportRoutingDecision,
+  UserFeedback
+} from "./scoring/types";
 
 export const MessageType = {
   CheckActiveTab: "CHECK_ACTIVE_TAB",
@@ -59,7 +66,14 @@ export type ExtensionRequest =
 
 export type ExtensionResponse =
   | { ok: true; result: AnalysisResult | null }
-  | { ok: true; reportId: string }
+  | {
+      ok: true;
+      reportId: string;
+      queued: boolean;
+      routingDecision?: ReportRoutingDecision;
+      destinations?: ReportDestinationSummary[];
+      warning?: string;
+    }
   | { ok: true; history: HistoryEntry[] }
   | { ok: true; prefs: Preferences }
   | { ok: true }

@@ -4,7 +4,7 @@ export type SignalSeverity = "info" | "low" | "medium" | "high";
 export type SignalSource = "url" | "page" | "reputation" | "rdap" | "system";
 export type ReportRegion = "US" | "CA";
 export type ScamType = "phishing" | "fake_shop" | "crypto" | "impersonation" | "other";
-export type ReportRoutingDecision = "eligible" | "held_low_risk";
+export type ReportRoutingDecision = "review_priority" | "standard_review";
 
 export interface RiskSignal {
   id: string;
@@ -66,6 +66,22 @@ export interface UserFeedback {
   routingDecision?: ReportRoutingDecision;
   destinationIds?: string[];
   result: AnalysisResult | null;
+}
+
+export interface ReportDestinationSummary {
+  id: string;
+  region: ReportRegion;
+  label: string;
+  agency: string;
+  url: string;
+  capability: "manual_portal" | "guidance";
+  supportedScamTypes: ScamType[];
+}
+
+export interface ReportSubmissionResponse {
+  reportId: string;
+  routingDecision: ReportRoutingDecision;
+  destinations: ReportDestinationSummary[];
 }
 
 export interface HistoryEntry {

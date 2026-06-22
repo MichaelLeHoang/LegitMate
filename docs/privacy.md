@@ -12,10 +12,13 @@ Default behavior:
   sent to the backend by default.
 - Report region is selected manually in settings. LegitMate does not request
   geolocation permission to infer the user's location.
-- Scam reports are saved locally first. Official reporting destinations are
-  opened only after the user confirms the report-routing modal.
-- Low-risk or unknown reports are held from automatic external routing to reduce
-  false reports.
+- Scam reports are saved locally first, then submitted to LegitMate's central
+  review queue when the API is available.
+- Report region is stored with the report so reviewers can choose the right
+  official destination later. The extension does not submit reports directly to
+  government or third-party destinations.
+- Low-risk or unknown reports remain in the central review queue at standard
+  priority to reduce false reports.
 
 The project should keep this privacy baseline unless a future feature has a
 clear user-facing reason, explicit opt-in, and updated documentation.

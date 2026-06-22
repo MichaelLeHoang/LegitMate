@@ -1,4 +1,4 @@
-import { analyzeDomain } from "../api/client";
+import { analyzeDomain, submitReport } from "../api/client";
 import { MessageType, type ExtensionRequest, type ExtensionResponse } from "../messages";
 import { buildAnalysisResult } from "../scoring/scoring";
 import type { AnalysisResult, DomainAnalysisResponse, PageSignalSummary } from "../scoring/types";
@@ -31,7 +31,23 @@ async function handleMessage(message: ExtensionRequest): Promise<ExtensionRespon
       return { ok: true, result: await getCachedResultForActiveTab() };
     case MessageType.ReportSite: {
       const reportId = await saveFeedback(message.payload);
-      return { ok: true, reportId };
+      try {
+        const submission = await submitReport(message.payload);
+        return {
+          ok: true,
+          reportId: submission.reportId,
+          queued: true,
+          routingDecision: submission.routingDecision,
+          destinations: submission.destinations
+        };
+      } catch (error) {
+        return {
+          ok: true,
+          reportId,
+          queued: false,
+          warning: error instanceof Error ? error.message : "central report queue unavailable"
+        };
+      }
     }
     case MessageType.GetHistory:
       return { ok: true, history: await getHistory() };
