@@ -43,8 +43,24 @@ class ReportRequest(BaseModel):
     domain: str | None = Field(default=None, max_length=253)
     url: str = Field(min_length=1, max_length=4096)
     verdict: Literal["safe", "unsafe"]
-    result: dict
+    scamType: Literal["phishing", "fake_shop", "crypto", "impersonation", "other"] | None = None
+    region: Literal["US", "CA"] | None = None
+    routingDecision: Literal["eligible", "held_low_risk"] | None = None
+    destinationIds: list[str] = Field(default_factory=list)
+    result: dict | None = None
+
+
+class ReportDestination(BaseModel):
+    id: str
+    region: Literal["US", "CA"]
+    label: str
+    agency: str
+    url: str
+    capability: Literal["manual_portal", "guidance"]
+    supportedScamTypes: list[Literal["phishing", "fake_shop", "crypto", "impersonation", "other"]]
 
 
 class ReportResponse(BaseModel):
     reportId: str
+    routingDecision: Literal["eligible", "held_low_risk"]
+    destinations: list[ReportDestination]

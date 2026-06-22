@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.domain import DomainValidationError, normalize_domain
 from app.models import ReportRequest, ReportResponse
+from app.reporting import destinations_for, routing_decision_for
 
 router = APIRouter()
 
@@ -17,4 +18,8 @@ async def report_site(payload: ReportRequest) -> ReportResponse:
             normalize_domain(payload.domain)
         except DomainValidationError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ReportResponse(reportId=str(uuid.uuid4()))
+    return ReportResponse(
+        reportId=str(uuid.uuid4()),
+        routingDecision=routing_decision_for(payload.result),
+        destinations=destinations_for(payload.region, payload.scamType),
+    )

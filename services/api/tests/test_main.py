@@ -49,3 +49,58 @@ def test_analyze_domain_rejects_full_url() -> None:
     client = TestClient(app)
     response = client.post("/v1/analyze/domain", json={"domain": "https://example.com/login"})
     assert response.status_code == 400
+
+
+def test_report_site_returns_region_destinations() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/v1/report",
+        json={
+            "url": "https://secure.example.test/login",
+            "verdict": "unsafe",
+            "scamType": "phishing",
+            "region": "CA",
+            "result": {"score": 45, "riskLevel": "medium"},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["routingDecision"] == "eligible"
+    assert {destination["id"] for destination in payload["destinations"]} >= {
+        "ca-cafc",
+        "ca-cyber-centre",
+    }
+
+
+def test_report_site_holds_low_risk_result() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/v1/report",
+        json={
+            "url": "https://example.test",
+            "verdict": "unsafe",
+            "scamType": "other",
+            "region": "US",
+            "result": {"score": 10, "riskLevel": "low"},
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["routingDecision"] == "held_low_risk"
+
+
+def test_report_site_rejects_invalid_region() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/v1/report",
+        json={
+            "url": "https://example.test",
+            "verdict": "unsafe",
+            "scamType": "phishing",
+            "region": "GB",
+            "result": {"score": 45, "riskLevel": "medium"},
+        },
+    )
+
+    assert response.status_code == 422

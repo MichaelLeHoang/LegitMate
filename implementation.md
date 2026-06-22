@@ -1,155 +1,144 @@
-# LegitMate v0.1 Implementation Plan
+# LegitMate Implementation Roadmap
 
-  ## Summary
+## Product Positioning
 
-  Build a privacy-first, open-source Chrome extension that analyzes the current active site and returns an explainable website risk score. v0.1 will focus on deterministic URL/domain/page signals, domain-only backend checks, and clear user-facing explanations rather than AI or aggressive
-  blocking.
+LegitMate is a privacy-first, open-source browser extension that gives users an
+explainable website risk score. It should not claim to replace built-in browser
+protection or decide whether a site is absolutely safe. Its job is to show why a
+site may be suspicious, especially for phishing pages, fake shops, impersonation
+sites, suspicious login/payment pages, and scam-like offers.
 
-  Use a monorepo:
+The market already has browser-level protection and commercial extensions. The
+project's advantage is transparency: every score is backed by visible signals,
+confidence, and user-verifiable evidence. The default product stance remains
+local-first, minimal-permission, and user-confirmed for any external reporting.
 
-  apps/extension        # Chrome MV3 extension, React, TypeScript, Vite
-  services/api          # FastAPI backend for RDAP/reputation/feed aggregation
-  docs                  # privacy, scoring, threat model, contribution docs
+Useful public references for the roadmap:
 
-  ## Key Changes
+- APWG phishing trend reports: https://apwg.org/trendreports
+- Google Safe Browsing: https://safebrowsing.google.com/
+- Safe Browsing API overview: https://developers.google.com/safe-browsing/v4
+- Chrome Web Store program policies: https://developer.chrome.com/docs/webstore/program-policies/policies
+- Chrome extension permission guidance: https://developer.chrome.com/docs/extensions/develop/concepts/declare-permissions
 
-  - Extension:
-      - Manifest V3 Chrome extension using activeTab, storage, and minimal host permissions.
-      - Popup UI with current-site score, risk level, reasons, confidence, and actions.
-      - Background service worker coordinates tab lookup, scoring requests, cache reads/writes, and badge updates.
-      - Programmatic content-script injection only when the user checks a page.
-      - Local heuristic engine for URL and lightweight page signals.
+## Current State
 
-  - Backend:
-      - FastAPI service with domain-only APIs by default.
-      - Endpoints:
-          - POST /v1/analyze/domain
-          - POST /v1/report
-          - GET /v1/health
+- The Chrome MV3 extension uses a React/Vite popup, background service worker,
+  local URL scoring, on-demand page-signal collection, cache/history storage,
+  user preferences, and toolbar badge updates.
+- The FastAPI backend supports domain-only analysis with RDAP and feed-derived
+  reputation signals.
+- Reports can include scam type, user-selected region, routing decision, and
+  recommended destination ids.
+- Region-based report routing currently supports the United States and Canada.
+  It is guided routing only: LegitMate opens official destination pages after
+  user confirmation, and does not silently submit reports to agencies.
+- Current preferences are `autoScanOnOpen`, `showBadge`, `reduceMotion`, and
+  `reportRegion`.
 
-      - Aggregate RDAP/domain age, phishing-feed matches, and cached reputation metadata.
-      - No full URL collection by default; full URL scans are reserved for explicit future opt-in.
+## Phased Roadmap
 
-  - Scoring:
-      - Return a structured result:
-          - score: 0-100
-          - riskLevel: low | medium | high | unknown
-          - confidence: low | medium | high
-          - reasons: explainable positive/negative signals
-          - checkedAt
-          - dataSources
+### Phase 0: Baseline Audit And Documentation
 
-      - Initial signals:
-          - IP-address URL
-          - punycode / xn--
-          - suspicious keywords
-          - excessive URL length
-          - many subdomains
-          - brand-like domain mismatch
-          - login/payment form detected
-          - form submits to another origin
-          - domain age from RDAP
-          - known phishing-feed match
+- Keep `README.md`, `design.md`, `docs/privacy.md`, `docs/scoring.md`, and this
+  roadmap aligned with implemented behavior.
+- Verify core commands before release: `npm run typecheck`, `npm test`,
+  `npm run build`, and `pytest` from `services/api`.
+- Keep score language precise: internal `score` is a risk score where higher is
+  worse; user-facing trust score is the inverse.
 
-      - Scoring logic lives in open TypeScript/Python modules and is documented in docs/scoring.md.
+### Phase 1: v0.1 Public MVP Hardening
 
-  - UI:
-      - Popup-first interface, not a landing page.
-      - States: idle, checking, low/medium/high/unknown, backend unavailable, unsupported page.
-      - Actions:
-          - Check current site
-          - Copy safety report
-          - Report this site
-          - Open external scan
-          - Mark as safe/unsafe feedback
+- Finish popup-first flows: score, risk level, reasons, confidence, copy report,
+  report site, external scan, trusted feedback, and clear backend-offline state.
+- Preserve narrow permissions: `activeTab`, `scripting`, `storage`, and API host
+  permissions only.
+- Keep deterministic scoring first. No ML, background browsing surveillance, or
+  aggressive blocking in v0.1.
+- Add only source-attributed reputation data and document API terms/rate limits.
 
-      - Badge shows compact status: LOW, MED, HIGH, or ?.
+### Phase 2: Regional Report Routing
 
-  ## Implementation Phases
+- Maintain a destination registry for supported regions and scam types.
+- Default `reportRegion` to `US`; allow manual switching to `CA`.
+- Show a confirmation modal before any external destination opens.
+- Route medium/high-risk reports as eligible when `score >= 30` or
+  `riskLevel` is `medium`/`high`.
+- Hold low/unknown reports from automatic routing, but still save them for local
+  feedback and future review.
+- Keep direct external submission disabled until an agency has a verified API or
+  documented intake flow that permits automated submissions.
 
-  1. Scaffold monorepo
-      - Add package manager config, TypeScript/Vite extension app, FastAPI service, shared lint/test scripts, and README setup instructions.
+Initial destinations:
 
-  2. Build extension shell
-      - Add MV3 manifest, popup entrypoint, background service worker, Chrome API adapter, typed message contracts, and storage helpers.
+- US: FTC ReportFraud, FBI IC3, FTC phishing reporting guidance.
+- Canada: Canadian Anti-Fraud Centre, Canadian Centre for Cyber Security.
 
-  3. Implement local scoring
-      - Build URL parser, heuristic rules, score aggregation, reason formatting, and unit tests.
-      - Cache the latest result per normalized hostname using chrome.storage.session or chrome.storage.local with TTL.
+Official references:
 
-  4. Add content checks
-      - Inject content script on user action.
-      - Detect login/payment forms, external form actions, password fields, suspicious page text, and basic contact-policy absence.
-      - Return only compact findings to the service worker.
+- FTC phishing reporting guidance: https://consumer.ftc.gov/articles/how-recognize-avoid-phishing-scams
+- FTC ReportFraud: https://reportfraud.ftc.gov/
+- FBI IC3: https://www.ic3.gov/
+- Canadian Anti-Fraud Centre: https://antifraudcentre-centreantifraude.ca/report-signalez-eng.htm
+- Canadian Centre for Cyber Security: https://www.cyber.gc.ca/en/incident-management
 
-  5. Add FastAPI reputation service
-      - Implement POST /v1/analyze/domain.
-      - Normalize hostnames server-side.
-      - Add RDAP lookup with cache.
-      - Add feed lookup abstraction for PhishTank/OpenPhish-style data.
-      - Return source-specific findings, not a hidden black-box verdict.
+### Phase 3: Better Scam Detection
 
-  6. Connect extension to backend
-      - Extension sends normalized domain only.
-      - Merge backend findings with local/page findings.
-      - Render combined score and explanations.
-      - Handle timeout/offline states by showing local-only results.
+- Expand URL/domain/page signals: suspicious TLDs, URL shorteners, encoded
+  characters, `@` symbol, punycode, brand impersonation, newly issued
+  certificates, redirects, fake-shop cues, missing contact/return policy,
+  payment/login forms, crypto/investment language, and fake urgency.
+- Improve page-signal collection while preserving the default rule that raw page
+  content and form values are not sent to the backend.
+- Add concise education cards explaining the highest-impact risk signals.
 
-  7. Add docs
-      - docs/privacy.md: what is collected, what is not collected, cloud-check behavior.
-      - docs/scoring.md: all v0.1 rules, weights, examples, and limitations.
-      - docs/threat-model.md: extension trust boundaries and abuse risks.
-      - CONTRIBUTING.md: false positive/false negative reporting process.
+### Phase 4: Opt-In High-Risk Warning Layer
 
-  ## Public Interfaces
+- Add warning behavior only as explicit opt-in.
+- Default threshold: warn only for high risk; optionally allow medium risk.
+- Future preferences: `autoWarnEnabled`, `autoWarnRiskThreshold`, and
+  `autoWarnCooldownMinutes`.
+- Prefer an in-page banner or browser notification. Do not assume the toolbar
+  popup can always appear automatically.
+- Update permissions, privacy docs, and Chrome Web Store disclosures before any
+  broader host access or background monitoring.
 
-  - Extension message types:
-      - CHECK_ACTIVE_TAB
-      - GET_CACHED_RESULT
-      - REPORT_SITE
-      - COPY_REPORT_DATA
+### Phase 5: Data, Community, And Evaluation
 
-  - Backend request:
+- Add false-positive and false-negative workflows.
+- Treat community reports as signals, not truth, and add abuse controls.
+- Track evaluation metrics: false positive rate, false negative rate, detection
+  latency, feed overlap, and newly observed suspicious domains missed by feeds.
+- Publish scoring docs that map every score impact to a stable signal id.
 
-  {
-    "domain": "example.com",
-    "clientVersion": "0.1.0"
-  }
+### Phase 6: Explainable ML, Later
 
-  - Backend response:
+- Start with simple explainable models only after deterministic data and labels
+  are reliable.
+- Candidate models: Logistic Regression, Random Forest, and LightGBM.
+- Candidate features: URL lexical features, domain metadata, threat-feed labels,
+  benign top-site lists, and page-level features.
+- Later options: ONNX/browser inference, TensorFlow.js, MobileBERT-style local
+  classifier, and LLM-generated explanations.
+- Do not make LLM-only detection authoritative.
 
-  {
-    "domain": "example.com",
-    "riskSignals": [],
-    "reputation": {
-      "feedMatches": [],
-      "domainAgeDays": null,
-      "rdapAvailable": false
-    },
-    "checkedAt": "ISO-8601 timestamp"
-  }
+### Phase 7: Long-Term Product
 
-  ## Test Plan
+- Add a public web dashboard, threat database, maintainer review flow, developer
+  API, and suspicious URL submission page.
+- Explore email-link scanning, QR-code scam checking, fake-shop detection, brand
+  impersonation monitoring, enterprise allow/block lists, and installed-extension
+  safety scanning.
+- Productionize backend deployment, CORS, feed ingestion jobs, package pipeline,
+  and Chrome Web Store release assets.
 
-  - Unit tests:
-      - URL normalization and parsing.
-      - Suspicious keyword detection.
-      - backend response validation.
-      - FastAPI domain validation and RDAP/feed adapter behavior.
+## Acceptance Checks
 
-  - Extension tests:
-      - Verify backend failure falls back to local-only scoring.
-      - Verify no full URL is sent in default domain-only mode.
-
-  - Manual acceptance checks:
-      - paypal.com shows low/unknown risk with limited reasons.
-      - secure.paypal.com.example.test shows impersonation/subdomain risk.
-      - IP-address URL shows high-risk reason.
-      - page with password form on suspicious domain includes form-related reason.
-      - backend offline still produces a local report.
-      - extension permissions do not request <all_urls> by default.
-  - v0.1 targets Chrome MV3 first.
-  - Backend stack is FastAPI.
-  - Default privacy mode sends only normalized domain names to the backend.
-  - No ML model, blocking overlay, enterprise dashboard, or community moderation workflow in v0.1.
-  - Full URL scans, warning overlays, dashboard, and ML are planned for later versions after the scoring baseline and privacy docs are stable.
+- Safe domain: low or unknown risk with no alarming copy.
+- Suspicious domain: medium/high risk with source-attributed reasons.
+- Backend unavailable: local-only result with warning, not a hard failure.
+- Report region: US/Canada destinations change with the setting.
+- Report routing: medium/high risk opens destinations only after confirmation.
+- Report hold: low/unknown risk is saved but not automatically routed.
+- Privacy: no geolocation permission, no browsing-history upload, and no full
+  URL cloud checks by default.

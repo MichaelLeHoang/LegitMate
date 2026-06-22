@@ -17,10 +17,18 @@ import {
 } from "lucide-react";
 import { MessageType, type ExtensionResponse } from "../messages";
 import {
+  getReportDestinations,
+  getRoutingDecision,
+  REPORT_REGIONS,
+  type ReportDestination
+} from "../reporting/reportRouting";
+import {
   DEFAULT_PREFERENCES,
   type AnalysisResult,
   type HistoryEntry,
   type Preferences,
+  type ReportRoutingDecision,
+  type ScamType,
   type UserFeedback
 } from "../scoring/types";
 import MascotEgg from "./MascotEgg";
@@ -29,13 +37,19 @@ import "./styles.css";
 
 type Tab = "home" | "history" | "report" | "settings";
 
-const SCAM_TYPES = [
+const SCAM_TYPES: Array<{ value: ScamType; label: string }> = [
   { value: "phishing", label: "Phishing login page" },
   { value: "fake_shop", label: "Fake storefront / shopping scam" },
   { value: "crypto", label: "Investment / get-rich-quick" },
   { value: "impersonation", label: "Brand copycat / typosquatting" },
   { value: "other", label: "Other malicious / scam link" }
 ];
+
+interface PendingReport {
+  feedback: UserFeedback;
+  destinations: ReportDestination[];
+  routingDecision: ReportRoutingDecision;
+}
 
 function Popup() {
   const [activeTab, setActiveTab] = React.useState<Tab>("home");
@@ -47,8 +61,9 @@ function Popup() {
   const [prefs, setPrefs] = React.useState<Preferences>(DEFAULT_PREFERENCES);
 
   const [reportUrl, setReportUrl] = React.useState("");
-  const [reportType, setReportType] = React.useState("phishing");
+  const [reportType, setReportType] = React.useState<ScamType>("phishing");
   const [reportSuccess, setReportSuccess] = React.useState(false);
+  const [pendingReport, setPendingReport] = React.useState<PendingReport | null>(null);
 
   const toastTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -136,18 +151,36 @@ function Popup() {
     event.preventDefault();
     if (!reportUrl.trim()) return;
     const url = reportUrl.trim();
+    const matchingResult = result?.hostname && url.includes(result.hostname) ? result : null;
+    const routingDecision = getRoutingDecision(matchingResult);
+    const destinations = getReportDestinations(prefs.reportRegion, reportType);
     const feedback: UserFeedback = {
       domain: null,
       url,
       verdict: "unsafe",
+      scamType: reportType,
+      region: prefs.reportRegion,
+      routingDecision,
+      destinationIds: destinations.map((destination) => destination.id),
       // Attach the current scan only when it matches the reported URL.
-      result: result?.hostname && url.includes(result.hostname) ? result : null
+      result: matchingResult
     };
-    const response = await sendMessage({ type: MessageType.ReportSite, payload: feedback });
+    setPendingReport({ feedback, destinations, routingDecision });
+  }
+
+  async function confirmReport() {
+    if (!pendingReport) return;
+    const response = await sendMessage({ type: MessageType.ReportSite, payload: pendingReport.feedback });
     if (response.ok) {
       setReportSuccess(true);
       setReportUrl("");
-      toast(`Report filed (${reportType}).`);
+      if (pendingReport.routingDecision === "eligible") {
+        pendingReport.destinations.forEach((destination) => openExternalDestination(destination.url));
+        toast("Report saved. Official destinations opened.");
+      } else {
+        toast("Report saved for review.");
+      }
+      setPendingReport(null);
       setTimeout(() => setReportSuccess(false), 3000);
     } else {
       toast("Could not file report.");
@@ -180,6 +213,15 @@ function Popup() {
           <Check size={12} className="text-brand-yellow" />
           <span>{notification}</span>
         </div>
+      )}
+
+      {pendingReport && (
+        <ReportConfirmationModal
+          pendingReport={pendingReport}
+          result={pendingReport.feedback.result}
+          onCancel={() => setPendingReport(null)}
+          onConfirm={confirmReport}
+        />
       )}
 
       {/* Header */}
@@ -457,9 +499,9 @@ function Popup() {
         {activeTab === "report" && (
           <div className="flex flex-col gap-3">
             <div className="text-center">
-              <h3 className="font-display font-bold text-sm text-brand-dark">Blow the Whistle 🥚📢</h3>
+              <h3 className="font-display font-bold text-sm text-brand-dark">Report suspicious site</h3>
               <p className="text-xs text-brand-dark/60 mt-1">
-                Flag a suspicious site. Feedback is stored locally on this device.
+                Review official destinations for your selected region before filing.
               </p>
             </div>
 
@@ -497,7 +539,7 @@ function Popup() {
                   </label>
                   <select
                     value={reportType}
-                    onChange={(e) => setReportType(e.target.value)}
+                    onChange={(e) => setReportType(e.target.value as ScamType)}
                     className="w-full text-xs p-2 rounded-lg border border-brand-border bg-bg-warm/30 focus:outline-none focus:border-brand-orange focus:bg-white"
                   >
                     {SCAM_TYPES.map((type) => (
@@ -507,12 +549,28 @@ function Popup() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-brand-dark/50 tracking-wider block mb-1">
+                    Report region
+                  </label>
+                  <select
+                    value={prefs.reportRegion}
+                    onChange={(e) => updatePref("reportRegion", e.target.value as Preferences["reportRegion"])}
+                    className="w-full text-xs p-2 rounded-lg border border-brand-border bg-bg-warm/30 focus:outline-none focus:border-brand-orange focus:bg-white"
+                  >
+                    {Object.entries(REPORT_REGIONS).map(([region, label]) => (
+                      <option key={region} value={region}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   type="submit"
                   className="bg-brand-orange hover:bg-brand-deep w-full text-white text-xs font-display font-bold py-2 rounded-lg mt-1 cursor-pointer transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Send size={11} />
-                  Submit report
+                  Review destinations
                 </button>
               </form>
             )}
@@ -544,6 +602,23 @@ function Popup() {
                 onChange={(v) => updatePref("reduceMotion", v)}
                 divider
               />
+              <div className="border-t border-brand-border/40 pt-3">
+                <label className="text-xs font-bold text-brand-dark block mb-1">Report region</label>
+                <select
+                  value={prefs.reportRegion}
+                  onChange={(e) => updatePref("reportRegion", e.target.value as Preferences["reportRegion"])}
+                  className="w-full text-xs p-2 rounded-lg border border-brand-border bg-bg-warm/30 focus:outline-none focus:border-brand-orange focus:bg-white"
+                >
+                  {Object.entries(REPORT_REGIONS).map(([region, label]) => (
+                    <option key={region} value={region}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-brand-dark/50 block mt-1">
+                  Used to recommend official scam-reporting destinations. No location permission is requested.
+                </span>
+              </div>
             </div>
 
             <div className="bg-brand-white p-3 rounded-lg border border-brand-border text-[10px] text-brand-dark/60 leading-relaxed">
@@ -566,6 +641,111 @@ function Popup() {
         <NavButton icon={<AlertOctagon size={18} />} label="Report" active={activeTab === "report"} onClick={() => setActiveTab("report")} />
         <NavButton icon={<SettingsIcon size={18} />} label="Setup" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
       </footer>
+    </div>
+  );
+}
+
+function ReportConfirmationModal({
+  pendingReport,
+  result,
+  onCancel,
+  onConfirm
+}: {
+  pendingReport: PendingReport;
+  result: AnalysisResult | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const isEligible = pendingReport.routingDecision === "eligible";
+  const topReasons = result?.reasons.slice(0, 3) ?? [];
+
+  return (
+    <div className="absolute inset-0 z-40 bg-brand-dark/45 p-4 flex items-center justify-center">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-confirm-title"
+        className="bg-brand-white w-full max-h-[500px] overflow-y-auto rounded-xl border-2 border-brand-border shadow-2xl p-4 flex flex-col gap-3"
+      >
+        <div>
+          <h3 id="report-confirm-title" className="font-display font-bold text-sm text-brand-dark">
+            Confirm report routing
+          </h3>
+          <p className="text-xs text-brand-dark/60 mt-1 leading-snug">
+            LegitMate will save this report and show official destinations for your selected region.
+          </p>
+        </div>
+
+        <div
+          className={`rounded-lg border p-2.5 ${
+            isEligible ? "bg-brand-red/10 border-brand-red/25" : "bg-brand-yellow/15 border-brand-yellow/50"
+          }`}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-brand-dark/50">
+            Routing decision
+          </div>
+          <div className="text-xs font-bold text-brand-dark mt-0.5">
+            {isEligible ? "Eligible to open official destinations" : "Saved only; held from auto-routing"}
+          </div>
+          <p className="text-[11px] text-brand-dark/65 mt-1 leading-snug">
+            {isEligible
+              ? "The scan result is medium or high risk, so LegitMate can open the destination pages after confirmation."
+              : "The scan did not find enough risk signals. The report will be saved without opening external destinations."}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-brand-border p-2.5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-brand-dark/50">
+            Scan summary
+          </div>
+          <div className="text-xs font-semibold text-brand-dark mt-0.5">
+            {result
+              ? `${result.riskLevel.toUpperCase()} risk, score ${result.score}/100`
+              : "No matching scan attached"}
+          </div>
+          {topReasons.length > 0 && (
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {topReasons.map((reason) => (
+                <li key={`${reason.source}-${reason.id}`} className="text-[11px] text-brand-dark/70 leading-snug">
+                  {reason.title}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-brand-dark/50">
+            Official destinations
+          </div>
+          {pendingReport.destinations.map((destination) => (
+            <div
+              key={destination.id}
+              className="text-left rounded-lg border border-brand-border bg-bg-warm/35 p-2.5"
+            >
+              <span className="text-xs font-bold text-brand-dark block">{destination.label}</span>
+              <span className="text-[10px] text-brand-dark/55 block mt-0.5">{destination.agency}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="bg-bg-warm hover:bg-brand-border/40 text-brand-dark font-display font-bold text-xs py-2 px-3 rounded-lg border border-brand-border transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="bg-brand-orange hover:bg-brand-deep text-white font-display font-bold text-xs py-2 px-3 rounded-lg transition-colors cursor-pointer"
+          >
+            {isEligible ? "Save and open" : "Save report"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -648,6 +828,10 @@ function formatRelative(iso: string): string {
 
 function openExternalScan(domain: string) {
   chrome.tabs.create({ url: `https://urlscan.io/search/#domain:${encodeURIComponent(domain)}` });
+}
+
+function openExternalDestination(url: string) {
+  chrome.tabs.create({ url });
 }
 
 function sendMessage(message: unknown): Promise<ExtensionResponse> {

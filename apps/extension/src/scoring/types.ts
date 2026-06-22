@@ -2,6 +2,9 @@ export type RiskLevel = "low" | "medium" | "high" | "unknown";
 export type Confidence = "low" | "medium" | "high";
 export type SignalSeverity = "info" | "low" | "medium" | "high";
 export type SignalSource = "url" | "page" | "reputation" | "rdap" | "system";
+export type ReportRegion = "US" | "CA";
+export type ScamType = "phishing" | "fake_shop" | "crypto" | "impersonation" | "other";
+export type ReportRoutingDecision = "eligible" | "held_low_risk";
 
 export interface RiskSignal {
   id: string;
@@ -58,6 +61,10 @@ export interface UserFeedback {
   domain: string | null;
   url: string;
   verdict: "safe" | "unsafe";
+  scamType?: ScamType;
+  region?: ReportRegion;
+  routingDecision?: ReportRoutingDecision;
+  destinationIds?: string[];
   result: AnalysisResult | null;
 }
 
@@ -78,10 +85,13 @@ export interface Preferences {
   showBadge: boolean;
   /** Disable popup animations. */
   reduceMotion: boolean;
+  /** Region used to recommend official scam-reporting destinations. */
+  reportRegion: ReportRegion;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   autoScanOnOpen: true,
   showBadge: true,
-  reduceMotion: false
+  reduceMotion: false,
+  reportRegion: "US"
 };
